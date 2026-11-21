@@ -290,7 +290,7 @@ class Film {
     const target = (index + dir + SHOTS.length) % SHOTS.length;
     for (let i = 0; i < target; i++) start += SHOTS[i].dur;
     this.t = start + 0.01;
-    this.bfly.histFilled = 0;
+    this.snap = true;
   }
 
   tap(n) {
@@ -363,7 +363,9 @@ class Film {
     shot.fill(s, u, this.world, this.stage);
     // dip to black around each cut
     const fade = sm(0, FADE, local) * sm(0, FADE, shot.dur - local);
-    const k = fade < 0.05 ? 1 : 1 - Math.exp(-dt * 3);
+    const cut = fade < 0.05 || this.snap;
+    if (this.snap) { this.post.feedback.reset = true; this.snap = false; }
+    const k = cut ? 1 : 1 - Math.exp(-dt * 3);
     for (const key of Object.keys(s.op)) this.op[key] += (s.op[key] - this.op[key]) * k;
     Object.assign(this.stage.opacity, this.op);
 
@@ -384,7 +386,7 @@ class Film {
     sph.theta += p.yaw + p.sx * 0.06 * p.active;
     sph.phi = Math.min(Math.PI - 0.2, Math.max(0.2, sph.phi - p.pitch - p.sy * 0.04 * p.active));
     const want = new THREE.Vector3().setFromSpherical(sph).add(s.look);
-    const ck = fade < 0.05 ? 1 : 1 - Math.exp(-dt * 6);
+    const ck = cut ? 1 : 1 - Math.exp(-dt * 6);
     this.camPos.lerp(want, ck);
     this.camLook.lerp(s.look, ck);
     this.camera.position.copy(this.camPos);
@@ -409,7 +411,7 @@ class Film {
     else if (index !== 4) s.echoDir.set(0.55, 0.05, -1).normalize();
     b._echoDir.copy(s.echoDir);
     b.echoStep = s.echoStep;
-    if (fade < 0.05) { b.pos.copy(s.bpos); b.root.quaternion.copy(s.bQuat); b.histFilled = 0; }
+    if (cut) { b.pos.copy(s.bpos); b.root.quaternion.copy(s.bQuat); b.histFilled = 0; b.uniforms.uFlapBase.value = s.base; }
     b.uniforms.uFlapBase.value += (s.base - b.uniforms.uFlapBase.value) * (1 - Math.exp(-dt * 3));
     b.update(dt, this.world, {
       flapSpeed: s.flap * (this.paused ? 0 : 1), scale: s.bScale, follow: this._zero, wing: 1,
