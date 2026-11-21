@@ -134,14 +134,14 @@ export function createUI(app) {
             <small>第 ${r.lap} 轮 · ${new Date(r.time).toLocaleTimeString().slice(0, 5)}</small>
             ${r.note ? `<i>${esc(r.note)}</i>` : ''}
           </div>
-          <button class="go" title="${ahead ? '快进到这里' : '倒放回到这里'}">${ahead ? '▶▶' : '◀◀'}</button>
+          <button class="go" title="${ahead ? '快进到这里' : '回溯到这里'}">${ahead ? '▶▶' : '◀◀'}</button>
         </div>`;
       }).join('');
     }
     const n = app.selected.size;
     $('#btnGoSel').disabled = !n;
     $('#btnDelSel').disabled = !n;
-    $('#btnGoSel').textContent = n > 1 ? `倒放依次回到 ${n} 只` : n === 1 ? '倒放回到所选' : '选择记录后倒放';
+    $('#btnGoSel').textContent = n > 1 ? `回溯，依次回到 ${n} 只` : n === 1 ? '回溯到所选' : '选择记录后回溯';
     $('#btnSelAll').textContent = app.records.length && app.records.every((r) => app.selected.has(r.id)) ? '取消全选' : '全选';
   };
   ui.highlight = (id) => {
@@ -156,7 +156,7 @@ export function createUI(app) {
   ui.travel = (r, remaining = 0) => {
     const o = $('#travel');
     if (!r) { o.classList.remove('show'); return; }
-    o.querySelector('.t-dir').textContent = r.i < app.head ? '◀◀ 倒放' : '▶▶ 快进';
+    o.querySelector('.t-dir').textContent = r.i < app.head ? '◀◀ 回溯' : '▶▶ 快进';
     o.querySelector('.t-to').textContent = `回到记录 ${r.n} · FRAME ${pad(r.frame)} / 76 · 第 ${r.lap} 轮`;
     o.querySelector('.t-more').textContent = remaining ? `之后还有 ${remaining} 只` : '';
     o.classList.add('show');
@@ -170,7 +170,7 @@ export function createUI(app) {
     const playing = app.playing && !app.inspect;
     body.classList.toggle('paused', !playing && !app.travel);
     $('#btnPlay').classList.toggle('is-playing', playing);
-    $('#btnPlay').querySelector('span').textContent = app.travel ? '倒放中' : playing ? '暂停' : '继续';
+    $('#btnPlay').querySelector('span').textContent = app.travel ? '回溯中' : playing ? '暂停' : '继续';
     $('#speed').querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === app.speed));
     rew.classList.toggle('on', app.holdRewind);
   };
