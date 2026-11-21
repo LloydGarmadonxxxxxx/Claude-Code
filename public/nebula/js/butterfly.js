@@ -91,7 +91,7 @@ function buildWingGeometry(segs = 150, rings = 34) {
 }
 
 const HISTORY = 360;
-const GHOSTS = 26;
+const GHOSTS = 30;
 
 export class Butterfly {
   constructor(scene, palette) {
@@ -129,6 +129,7 @@ export class Butterfly {
       uRainbow: { value: 0 },
       uGlowAmt: { value: 1 },
       uSpec: { value: 0.3 },
+      uFlapBase: { value: 0.18 },
     };
     this.uniforms = common;
     this.shapeTarget = WING_SHAPES.classic;
@@ -216,6 +217,7 @@ export class Butterfly {
     this._s = new THREE.Vector3();
     this._v4 = new THREE.Vector4();
     this._echoDir = new THREE.Vector3(0.62, 0.02, -1).normalize();
+    this.echoStep = 1.05;
   }
 
   triggerFlutter() {
@@ -235,12 +237,12 @@ export class Butterfly {
     u.uShC.value.lerp(this._v4.set(C[0], C[1], 0, 0), k);
   }
 
-  update(dt, t, { flapSpeed, scale, follow, wing, echo, echoSpread, bass, anim, basePos, sway, override = null, extraScale = 1 }) {
+  update(dt, t, { flapSpeed, scale, follow, wing, echo, echoSpread, bass, anim, basePos, sway, override = null, extraScale = 1, amp = null }) {
     this.morphShape(dt);
     // Flap
     const flutterBoost = 1 + this.flutter * 2.2;
     this.phase += dt * anim * flapSpeed * Math.PI * 2 * 1.15 * flutterBoost * (1 + bass * 0.7);
-    this.amp = 0.5 + 0.12 * Math.sin(t * 0.37) + bass * 0.25 + this.flutter * 0.25;
+    this.amp = (amp ?? 0.5 + 0.12 * Math.sin(t * 0.37)) + bass * 0.25 + this.flutter * 0.3;
     this.flutter = Math.max(0, this.flutter - dt * 0.55);
 
     // Position: base position + gentle hover + pointer follow (eased spring)
@@ -298,14 +300,14 @@ export class Butterfly {
         const hi = (this.histHead - 1 - back + HISTORY * 2) % HISTORY;
         const e = this.hist[hi];
         e.m.decompose(this._v, this._q, this._s);
-        const off = (i + 1) * 1.05 * echoSpread * s;
+        const off = (i + 1) * this.echoStep * echoSpread * s;
         this._v.addScaledVector(this._echoDir, off);
         this._s.multiplyScalar(1 - i * 0.012 * echoSpread);
         this._m.compose(this._v, this._q, this._s);
         this.ghosts.setMatrixAt(i, this._m);
         this.ghostPhase.array[i] = e.p;
         const fall = Math.pow(1 - i / GHOSTS, 1.4);
-        this.ghostAlpha.array[i] = visibleEcho * fall * (0.22 + 0.33 * echoSpread);
+        this.ghostAlpha.array[i] = visibleEcho * fall * (0.2 + 0.22 * echoSpread);
       }
       this.ghosts.instanceMatrix.needsUpdate = true;
       this.ghostPhase.needsUpdate = true;

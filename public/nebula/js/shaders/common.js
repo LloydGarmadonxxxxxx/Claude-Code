@@ -59,6 +59,7 @@ export const WING = /* glsl */ `
 uniform vec4 uShA;
 uniform vec4 uShB;
 uniform vec4 uShC;
+uniform float uFlapBase;
 float wingLobe(float th, float c, float k, float p){
   float a = clamp((th - c) * k, -1.5707, 1.5707);
   return pow(max(cos(a), 0.0), p);
@@ -79,6 +80,6 @@ float wingFlap(float phase, float amp, float y, float radial){
   float lag = (y < 0.0 ? 0.35 : 0.0) + radial*0.25;
   float s = sin(phase - lag);
   float stroke = s + 0.22*sin(2.0*(phase-lag));
-  return 0.18 + amp * stroke;
+  return uFlapBase + amp * stroke;
 }
 `;

@@ -22,21 +22,28 @@ function godRaysShader(samples) {
       uniform sampler2D tDiffuse; uniform vec2 uLight; uniform float uStrength, uDecay, uDensity, uThreshold, uTime;
       varying vec2 vUv;
       float hash(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233)) + uTime)*43758.5453); }
+      vec3 safe(vec3 c){
+        if (any(isnan(c)) || any(isinf(c))) return vec3(0.0);
+        return clamp(c, 0.0, 48.0);
+      }
       void main(){
-        vec3 base = texture2D(tDiffuse, vUv).rgb;
+        // Some GPUs (notably Direct3D via ANGLE) can produce NaN/Inf from
+        // additive HDR overdraw; one bad pixel would be smeared over the whole
+        // screen by bloom, so every value is sanitised here first.
+        vec3 base = safe(texture2D(tDiffuse, vUv).rgb);
         if (uStrength < 0.001) { gl_FragColor = vec4(base, 1.0); return; }
         vec2 delta = (vUv - uLight) * uDensity / float(SAMPLES);
         vec2 p = vUv - delta * hash(vUv*1024.0);
         vec3 acc = vec3(0.0); float w = 1.0;
         for (int i = 0; i < SAMPLES; i++) {
           p -= delta;
-          vec3 s = texture2D(tDiffuse, clamp(p, 0.001, 0.999)).rgb;
+          vec3 s = safe(texture2D(tDiffuse, clamp(p, 0.001, 0.999)).rgb);
           s = max(s - uThreshold, 0.0);
           acc += s * w;
           w *= uDecay;
         }
         acc /= float(SAMPLES);
-        gl_FragColor = vec4(base + acc * uStrength, 1.0);
+        gl_FragColor = vec4(safe(base + acc * uStrength), 1.0);
       }`,
   };
 }
@@ -93,7 +100,8 @@ const FinalShader = {
       col *= mix(1.0, 1.0 - smoothstep(0.35, 1.05, r), uVignette);
       col += uFlash * vec3(1.0, 0.97, 0.92);
       col += (hash(vUv*uRes + uTime*61.0) - 0.5) * uGrain * (0.4 + 0.6*clamp(dot(col, vec3(0.33)), 0.0, 1.0));
-      gl_FragColor = vec4(max(col, 0.0), 1.0);
+      if (any(isnan(col))) col = vec3(0.0);
+      gl_FragColor = vec4(clamp(col, 0.0, 64.0), 1.0);
     }`,
 };
 
@@ -108,6 +116,7 @@ class FeedbackPass extends Pass {
       vertexShader: VS,
       fragmentShader: `uniform sampler2D tNew, tOld; uniform float uAmt; varying vec2 vUv;
         void main(){ vec3 n = texture2D(tNew, vUv).rgb; vec3 o = texture2D(tOld, vUv).rgb;
+          if (any(isnan(o)) || any(isinf(o))) o = vec3(0.0); if (any(isnan(n)) || any(isinf(n))) n = vec3(0.0);
           gl_FragColor = vec4(mix(n, max(n, o*0.97), uAmt), 1.0); }`,
     });
     this.copy = new THREE.ShaderMaterial({

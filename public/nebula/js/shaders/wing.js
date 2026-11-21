@@ -158,6 +158,12 @@ void main(){
     float inner = smoothstep(0.15, 0.3, rn) * (1.0 - smoothstep(0.86, 0.92, rn));
     alphaMul = mix(1.0, 0.18 + net*0.82, inner);
     light = net*inner*0.8 + veins*0.3;
+  } else if (pat == 8) { // pale glitter dust — the reference video's moth
+    vec2 g = floor(lp*85.0);
+    float h = fract(sin(dot(g, vec2(12.9898, 78.233)))*43758.5453);
+    float tw = 0.5 + 0.5*sin(uTime*2.0 + h*40.0);
+    light = step(0.86, h) * tw * 0.55 * smoothstep(0.15, 0.4, rn) + rim*0.35;
+    dark = veins*0.12 + smoothstep(0.55, 1.0, rn)*0.12;
   } else { // plain
     dark = 0.0;
     light = rim*0.3;
