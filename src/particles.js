@@ -238,8 +238,11 @@ export class ParticleTree {
         dy = dy * 0.65 + ((y - 0.5) / len) * 0.35;
         dz = dz * 0.65 + (z / len) * 0.35;
         const l2 = Math.hypot(dx, dy, dz) || 1;
-        const R = 9 + Math.pow(rand(), 0.6) * 24;
-        scatter.set([(dx / l2) * R, (dy / l2) * R * 0.8, (dz / l2) * R], i * 3);
+        const R = 9 + Math.pow(rand(), 0.6) * 22;
+        // 向四周与后方爆散，z 方向压扁且不朝镜头飞（避免近距离巨大光斑造成的填充率暴涨）
+        let sz = (dz / l2) * R * 0.5;
+        if (sz > 4) sz = 4 - (sz - 4) * 1.5;
+        scatter.set([(dx / l2) * R * 1.15, (dy / l2) * R * 0.85, sz], i * 3);
       }
 
       // 星云目标：螺旋臂 + 球壳

@@ -96,12 +96,15 @@ void main() {
   float tw = 0.62 + 0.38 * sin(uTime * (1.4 + r2 * 4.0) + r1 * 60.0);
   float spark = pow(max(sin(uTime * (0.5 + r1 * 1.2) + r2 * 80.0), 0.0), 38.0) * 2.2;
 
-  float size = aData.x * uSize * (1.0 + coc * 0.85) * (1.0 + transit * 0.5);
+  float size = aData.x * uSize * (1.0 + coc * 0.6);
   float px = size * uScale / depth;
-  gl_PointSize = clamp(px, 1.0, 72.0);
+  // 限制最大光斑：靠近镜头的粒子缩小并淡出，控制 GPU 填充量
+  float near = smoothstep(4.0, 10.0, depth);
+  px = min(px, mix(6.0, 30.0, near));
+  gl_PointSize = max(px, 1.0);
 
   vAlpha = (tw + spark) / (1.0 + coc * coc * 2.2);
-  vAlpha *= clamp(px / 1.6, 0.25, 1.0);
+  vAlpha *= clamp(px / 1.6, 0.25, 1.0) * near;
   vBlur = clamp(coc * 0.6, 0.0, 1.0);
   vFlare = (type == 1.0 || type == 2.0) ? (0.55 + spark * 0.4) * (1.0 - vBlur) : spark * 0.25;
 
@@ -204,7 +207,7 @@ void main() {
   gl_Position = projectionMatrix * mv;
   float depth = max(-mv.z, 0.1);
   float head = 1.0 - aIdx;
-  gl_PointSize = clamp((0.05 + 0.13 * head * head) * uScale / depth, 1.0, 40.0);
+  gl_PointSize = clamp((0.05 + 0.13 * head * head) * uScale / depth, 1.0, 20.0);
   vAlpha = pow(head, 1.7);
   vColor = aCometColor * uIntensity * (1.0 + 1.5 * step(aIdx, 0.001));
 }

@@ -438,7 +438,7 @@ resize();
 
 // ======================= 自适应性能 =======================
 tree.setDrawCount(tier.particles);
-const perf = { frames: 0, time: 0, warmup: 3, good: 0 };
+const perf = { frames: 0, time: 0, warmup: 3, good: 0, ceiling: Infinity };
 function adaptQuality(dt) {
   if (perf.warmup > 0) {
     perf.warmup -= dt;
@@ -453,6 +453,8 @@ function adaptQuality(dt) {
   if (document.hidden) return;
   if (fps < 42) {
     perf.good = 0;
+    // 记住出现掉帧时的数量，之后回升不再超过它，避免“升-降-升”的反复卡顿
+    perf.ceiling = Math.min(perf.ceiling, tree.drawCount * 0.9);
     if (tree.drawCount > CONFIG.minParticles) {
       tree.setDrawCount(Math.max(CONFIG.minParticles, tree.drawCount * 0.8));
     } else if (pixelRatio > 1) {
@@ -463,8 +465,8 @@ function adaptQuality(dt) {
     }
   } else if (fps > 57) {
     perf.good += 2;
-    if (perf.good >= 8 && tree.drawCount < tree.count) {
-      tree.setDrawCount(tree.drawCount * 1.1);
+    if (perf.good >= 8 && tree.drawCount < Math.min(tree.count, perf.ceiling)) {
+      tree.setDrawCount(Math.min(tree.drawCount * 1.1, perf.ceiling));
       perf.good = 0;
     }
   }
