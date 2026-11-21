@@ -637,10 +637,12 @@ class App {
       const flip = Math.abs(v0) > 0.05 && (goal === 0 || Math.sign(goal) !== Math.sign(v0));
       const fromRest = Math.abs(v0) <= 0.05 && goal !== 0;
       const sameDir = !flip && !fromRest;
-      this.ramp = { goal, v0, t: 0, stage: flip ? 'decel' : fromRest ? 'hold' : 'adjust', sameDir };
+      // turning around for (or back from) 回溯 takes its time; ordinary pause/continue stays brisk
+      const slow = goal < 0 || v0 < -0.05;
+      this.ramp = { goal, v0, t: 0, stage: flip ? 'decel' : fromRest ? 'hold' : 'adjust', sameDir, slow };
     }
     const R = this.ramp;
-    const DECEL = 0.75, HOLD = 0.3, ACCEL = 0.95, ADJUST = 0.45;
+    const DECEL = R.slow ? 1.5 : 0.75, HOLD = R.slow ? 0.55 : 0.3, ACCEL = R.slow ? 1.8 : 0.95, ADJUST = 0.45;
     R.t += dt;
     if (R.stage === 'decel') {
       const u = Math.min(1, R.t / DECEL);
