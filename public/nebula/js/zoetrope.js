@@ -51,7 +51,7 @@ export class Zoetrope {
     this.group = new THREE.Group();
     scene.add(this.group);
     this.spacing = 1.1;
-    this.lensZ = -1.2; // where the butterfly 'now' is born — a comfortable distance from the lens
+    this.lensZ = -4.6; // where the butterfly 'now' is born — a comfortable distance from the lens
     this.scale = 0.46;
     this.disposables = [];
     const keep = (...x) => { this.disposables.push(...x); return x[0]; };
