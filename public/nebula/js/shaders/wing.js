@@ -246,9 +246,9 @@ void main(){
   col += acc*burn*5.0;
   // "the one now": gilded and lit from within
   if (vGold > 0.001) {
-    vec3 gold = vec3(1.0, 0.6, 0.16);
-    vec3 gilt = gold * (0.55 + 0.35*lamb) * (1.0 - dark*0.55) + gold * (rim*2.2 + light*1.3) + vec3(1.0, 0.82, 0.5) * fres * 0.5;
-    col = mix(col, gilt * 1.15, vGold);
+    vec3 gold = vec3(1.0, 0.58, 0.13);
+    vec3 gilt = gold * (0.6 + 0.4*lamb) * (1.0 - dark*0.5) + gold * (rim*3.2 + light*1.6) + vec3(1.0, 0.8, 0.45) * fres * 0.7;
+    col = mix(col, gilt * 1.3, vGold);
     alpha = mix(alpha, max(alpha, 0.97), vGold);
   }
   alpha *= alphaMul * vAlpha * uOpacity;

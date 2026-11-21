@@ -532,7 +532,8 @@ class App {
     const marks = new Set(this.records.map((r) => r.i));
     this.zoe.frameOpacity = this.op.frames;
     this.zoe.opacity = this.op.zoe;
-    this.zoe.update(this.head, { marks, extracted: this.inspect ? this.inspect.i : -1, time: this.world });
+    const projPx = this.camera.projectionMatrix.elements[5] * this.size.h * this.size.dpr * 0.5;
+    this.zoe.update(this.head, { marks, extracted: this.inspect ? this.inspect.i : -1, time: this.world, camera: this.camera, proj: projPx });
 
     // ---- the held (or resting) butterfly
     this.updateHeld(dt, sc);

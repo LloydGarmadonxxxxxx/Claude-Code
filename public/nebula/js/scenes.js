@@ -5,7 +5,7 @@ export const SCENES = [
     fill(s, t) {
       s.cam.set(Math.sin(t * 0.07) * 0.25, 0.15, 9.4); s.look.set(0, 0.12, -8);
       s.group.pos.set(0, 0, 0); s.group.rotY = 0; s.group.scale = 1;
-      Object.assign(s.op, { frames: 1, zoe: 1, lines: 0, gallery: 0, slab: 0, core: 0.95, dust: 0.8, bg: 1 });
+      Object.assign(s.op, { frames: 0.72, zoe: 1, lines: 0, gallery: 0, slab: 0, core: 0.85, dust: 0.8, bg: 1 });
       s.lightPos.set(0, 0, -66); s.cross = 0.3; s.coreSize = 50; s.rays = 0.55; s.fg = 0; s.lineFlow = 0;
     },
   },
@@ -23,7 +23,7 @@ export const SCENES = [
     fill(s, t) {
       s.cam.set(Math.sin(t * 0.09) * 0.4, -0.15, 10.4); s.look.set(0, 0, -8);
       s.group.pos.set(0, 0, 0); s.group.rotY = 0; s.group.scale = 1;
-      Object.assign(s.op, { frames: 1, zoe: 1, lines: 0, gallery: 0, slab: 0, core: 1.0, dust: 0.9, bg: 1 });
+      Object.assign(s.op, { frames: 0.72, zoe: 1, lines: 0, gallery: 0, slab: 0, core: 0.9, dust: 0.9, bg: 1 });
       s.lightPos.set(0.3, 0, -66); s.cross = 0.55; s.coreSize = 55; s.rays = 0.75; s.fg = 1; s.lineFlow = 0;
     },
   },
