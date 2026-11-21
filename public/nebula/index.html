@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
   <meta name="theme-color" content="#030303" />
-  <meta name="description" content="一只蝴蝶，在光与框之间。实时 3D 光影空间。" />
-  <title>NEBULA · 蝴蝶</title>
+  <meta name="description" content="光之走马灯：每一个光框里都住着一只静止的蝴蝶，光框飞逝，蝴蝶便飞了起来。暂停、抽出、记录、倒放。" />
+  <title>NEBULA · 蝴蝶走马灯</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23060606'/%3E%3Cpath d='M32 22c-5-9-17-10-17-2s8 12 15 12c-7 1-12 6-9 11s9 0 11-6c2 6 8 11 11 6s-2-10-9-11c7 0 15-4 15-12s-12-7-17 2z' fill='%23fff2d8'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,13 +16,82 @@
   </script>
 </head>
 <body>
-  <canvas id="stage" aria-label="一只发光的蝴蝶在 3D 空间中飞行"></canvas>
-  <div id="hud" class="hud">FRAME 01 / 76 · T+0.00S</div>
-  <div class="hint">移动 · 拖动 · 轻触蝴蝶</div>
-  <button id="fs" class="fs" aria-label="全屏" title="全屏 (F)">
-    <svg viewBox="0 0 24 24" class="enter"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
-    <svg viewBox="0 0 24 24" class="exit"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
-  </button>
+  <canvas id="stage" aria-label="光框走廊中的蝴蝶"></canvas>
+
+  <!-- scene choice -->
+  <header class="top">
+    <div class="brand"><div class="logo">NEBULA</div><div class="sub">ZOETROPE OF LIGHT</div></div>
+    <nav id="scenes" class="scenes" aria-label="选择场景"></nav>
+    <button id="fs" class="icon fs-btn" aria-label="全屏" title="全屏 (F)">
+      <svg viewBox="0 0 24 24" class="enter"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      <svg viewBox="0 0 24 24" class="exit"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+    </button>
+  </header>
+
+  <!-- hint while paused -->
+  <div class="pause-hint"><span class="dot"></span>已暂停 · 点击光框里任意一只蝴蝶，把它抽出来</div>
+
+  <!-- transport -->
+  <div class="transport glass">
+    <button id="btnRewind" class="t-btn" title="按住倒放（← 键）">
+      <svg viewBox="0 0 24 24"><path d="M11 6l-7 6 7 6zM20 6l-7 6 7 6z" class="fill"/></svg><span>按住倒放</span>
+    </button>
+    <button id="btnPlay" class="t-btn play" title="暂停 / 继续（空格）">
+      <svg viewBox="0 0 24 24" class="i-pause"><path d="M8.5 5.5v13M15.5 5.5v13"/></svg>
+      <svg viewBox="0 0 24 24" class="i-play"><path d="M7.5 5v14l11-7z" class="fill"/></svg><span>暂停</span>
+    </button>
+    <div id="speed" class="speed" title="播放速度">
+      <button data-v="0.25">¼×</button><button data-v="0.5">½×</button><button data-v="1">1×</button><button data-v="2">2×</button>
+    </div>
+    <button id="btnRecords" class="t-btn rec-btn" title="记录（R）">
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg><span>记录</span>
+    </button>
+  </div>
+
+  <!-- inspector: the butterfly you pulled out -->
+  <aside id="inspector" class="inspector glass" aria-label="抽出的蝴蝶">
+    <div class="handle"></div>
+    <div class="i-head">
+      <div><div id="inspFrame" class="i-frame">FRAME 01 / 76</div><div id="inspLap" class="i-lap">第 1 轮</div></div>
+      <span id="inspBadge" class="badge">未记录</span>
+    </div>
+    <p class="i-tip">拖动画面转动它 · 滚轮缩放 · 轻点它会抖一抖翅膀</p>
+    <div class="row"><label>翅膀开合</label><span class="v"></span></div>
+    <input id="sWing" type="range" min="-0.5" max="1.45" step="0.01" />
+    <div class="row"><label>光晕</label><span class="v"></span></div>
+    <input id="sGlow" type="range" min="0.3" max="2" step="0.01" />
+    <div class="row"><label>大小</label><span class="v"></span></div>
+    <input id="sSize" type="range" min="0.5" max="2.2" step="0.01" />
+    <div class="row"><label>色调</label></div>
+    <div id="tints" class="tints"></div>
+    <div class="row"><label>视角</label></div>
+    <div id="views" class="views"><button data-v="front">正面</button><button data-v="side">侧面</button><button data-v="back">背面</button><button data-v="top">俯视</button></div>
+    <input id="note" class="note" maxlength="80" placeholder="写一句话给这只蝴蝶（可选）" />
+    <div class="i-actions">
+      <button id="btnRecord" class="primary">记录这只蝴蝶</button>
+      <button id="btnPutBack">放回光框</button>
+    </div>
+  </aside>
+
+  <!-- records drawer -->
+  <aside id="drawer" class="drawer glass" aria-label="记录">
+    <div class="handle"></div>
+    <div class="d-head">
+      <h2>记录 <span id="recCount">0</span></h2>
+      <button id="drawerClose" class="x" aria-label="关闭">×</button>
+    </div>
+    <p class="d-tip">勾选一只或几只，光框会倒放，依次回到当时的那一帧。</p>
+    <div id="recList" class="rec-list"></div>
+    <div class="d-actions">
+      <button id="btnGoSel" class="primary" disabled>选择记录后倒放</button>
+      <div class="d-row"><button id="btnSelAll">全选</button><button id="btnDelSel" disabled>删除</button></div>
+    </div>
+  </aside>
+
+  <div id="travel" class="travel"><div class="t-dir">◀◀ 倒放</div><div class="t-to"></div><div class="t-more"></div></div>
+  <div class="scan"></div>
+  <div id="hud" class="hud">FRAME 01 / 76 · 第 1 轮 · T+0.00S</div>
+  <div id="toast" class="toast" role="status"></div>
   <div class="veil"></div>
   <div id="fatal" class="fatal" hidden><p></p><small>请使用最新版 Chrome、Edge、Safari 或 Firefox，并开启硬件加速。</small></div>
   <script type="module" src="./js/main.js"></script>
