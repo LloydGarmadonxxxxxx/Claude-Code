@@ -1,0 +1,19 @@
+{
+  "name": "xmas-particle-tree",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "3D particle Christmas tree with Three.js, GLSL and MediaPipe hand gestures",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.14",
+    "three": "0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  }
+}
