@@ -7,7 +7,7 @@ import { wingVertex, wingFragment } from './shaders/wing.js';
 // flight, exactly like a flipbook.
 
 export const CYCLE = 76;
-const SLOTS = 30;
+const SLOTS = 42;
 const H = 4.2;
 
 function squareRing(inner) {
@@ -33,7 +33,7 @@ export function poseOf(i, out = {}) {
   const a = (((i % CYCLE) + CYCLE) % CYCLE) / CYCLE * Math.PI * 2;
   out.x = 1.2 * Math.sin(a * 2);
   out.y = 0.6 * Math.sin(a * 3 + 0.6) + 0.15;
-  out.phase = i * (Math.PI * 2 / 9); // nine frames per wingbeat
+  out.phase = i * (Math.PI * 2 / 12); // twelve frames per wingbeat
   _e.set(-0.18 + 0.12 * Math.sin(a * 3), 0.4 * Math.cos(a * 2), -0.28 * Math.cos(a * 2));
   out.quat = (out.quat || new THREE.Quaternion()).setFromEuler(_e);
   return out;
@@ -48,7 +48,7 @@ export class Zoetrope {
   constructor(scene, bfly, colors) {
     this.group = new THREE.Group();
     scene.add(this.group);
-    this.spacing = 2.3;
+    this.spacing = 1.5;
     this.lensZ = 2.2;
     this.scale = 0.46;
     this.disposables = [];
@@ -77,7 +77,7 @@ export class Zoetrope {
           vec3 base = mix(vec3(0.75), uWarm, 0.25);
           vec3 c = base * (0.022 + 0.035*vE + inner*0.09 + outer*0.05) * (0.45 + 0.55*depth);
           c += uGold * vMark * (inner*0.35 + outer*0.25 + 0.03);
-          c += uGlow * vCur * (inner*0.25 + 0.02);
+          c += mix(uGlow, uGold, 0.7) * vCur * (inner*0.35 + outer*0.12 + 0.025);
           float a = vFade * uA;
           gl_FragColor = vec4(c*a, a);
         }`,
@@ -92,7 +92,7 @@ export class Zoetrope {
       uniforms: this.frameU,
       vertexShader: frameVS('0.66'),
       fragmentShader: `uniform vec3 uGlow, uGold; uniform float uA; varying float vMark; varying float vCur; varying float vFade;
-        void main(){ float a = vFade*uA*(0.2 + vMark*0.6 + vCur*0.35); gl_FragColor = vec4(mix(uGlow, uGold, vMark)*a, a); }`,
+        void main(){ float a = vFade*uA*(0.2 + vMark*0.6 + vCur*0.6); gl_FragColor = vec4(mix(uGlow, uGold, max(vMark, vCur*0.85))*a, a); }`,
       side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     })), SLOTS);
     this.edges.frustumCulled = false;
@@ -103,6 +103,8 @@ export class Zoetrope {
     const geo = keep(bfly.wingGeo.clone());
     this.aPhase = new THREE.InstancedBufferAttribute(new Float32Array(SLOTS), 1).setUsage(THREE.DynamicDrawUsage);
     this.aAlpha = new THREE.InstancedBufferAttribute(new Float32Array(SLOTS), 1).setUsage(THREE.DynamicDrawUsage);
+    this.aGold = new THREE.InstancedBufferAttribute(new Float32Array(SLOTS), 1).setUsage(THREE.DynamicDrawUsage);
+    geo.setAttribute('aIGold', this.aGold);
     geo.setAttribute('aIPhase', this.aPhase);
     geo.setAttribute('aIAlpha', this.aAlpha);
     geo.setAttribute('aIHue', new THREE.InstancedBufferAttribute(new Float32Array(SLOTS), 1));
@@ -132,9 +134,11 @@ export class Zoetrope {
     this._pose = {};
     this.opacity = 1;
     this.frameOpacity = 1;
+    this.gold = 1;
   }
 
-  frameZ(i, head) { return this.lensZ - (i - head) * this.spacing; }
+  // Frame i is born at the lens when the playhead reaches it, then recedes into the depth.
+  frameZ(i, head) { return this.lensZ - (head - i) * this.spacing; }
 
   frameTwist(i) { return 0.018 * Math.sin(i * 0.73) + 0.01 * Math.sin(i * 1.91); }
 
@@ -157,23 +161,25 @@ export class Zoetrope {
     this.wingU.uTime.value = time;
     this.wings.visible = this.opacity > 0.003;
     this.panels.visible = this.edges.visible = this.frameOpacity > 0.003;
-    const first = Math.floor(head) - 2;
+    const newest = Math.floor(head) + 1; // the next frame, about to be born at the lens
     for (let j = 0; j < SLOTS; j++) {
-      const i = first + (SLOTS - 1 - j); // draw far frames first
+      const i = newest - (SLOTS - 1 - j); // oldest (farthest) drawn first, newest last
       const slot = j;
       this.slotIndex[slot] = i;
       if (i < 0) {
-        this.aFade.array[slot] = 0; this.aAlpha.array[slot] = 0;
+        this.aFade.array[slot] = 0; this.aAlpha.array[slot] = 0; this.aGold.array[slot] = 0;
         this._m.makeScale(0, 0, 0);
         this.panels.setMatrixAt(slot, this._m); this.edges.setMatrixAt(slot, this._m); this.wings.setMatrixAt(slot, this._m);
         continue;
       }
       const z = this.frameZ(i, head);
-      // fade: far end dissolves into the light; frames that pass the lens fly off behind the viewer
+      const age = head - i; // 0 = the frame now, grows as it recedes
+      // a frame is born over the last fraction of a frame, then recedes and fades into the light
+      const birth = THREE.MathUtils.clamp(1 + age * 1.6, 0, 1);
       const fadeFar = THREE.MathUtils.smoothstep(z, far, far + 22);
-      const pass = 1 - THREE.MathUtils.smoothstep(z, this.lensZ + 0.2, this.lensZ + this.spacing * 1.6);
-      const fade = fadeFar * pass;
-      const cur = Math.max(0, 1 - Math.abs(i - head) * 0.9);
+      const fade = birth * fadeFar;
+      // "now" = the frame closest to the playhead; it is gilded
+      const cur = THREE.MathUtils.clamp(1 - Math.abs(age) * 1.15, 0, 1);
       this._q.setFromAxisAngle(this._p.set(0, 0, 1), this.frameTwist(i));
       this._fm.compose(this._p.set(0, 0, z), this._q, this._s.setScalar(1));
       this.panels.setMatrixAt(slot, this._fm);
@@ -182,15 +188,19 @@ export class Zoetrope {
       this.aMark.array[slot] = marks.has(i) ? 1 : 0;
       this.aCur.array[slot] = cur;
       const pose = poseOf(i, this._pose);
-      this._bm.compose(this._p.set(pose.x, pose.y, 0.05), pose.quat, this._s.setScalar(this.scale * 1.35));
+      const lift = 1 + cur * 0.08; // the one now is a touch larger
+      this._bm.compose(this._p.set(pose.x, pose.y, 0.05 + cur * 0.15), pose.quat, this._s.setScalar(this.scale * 1.35 * lift));
       this._m.multiplyMatrices(this._fm, this._bm);
       this.wings.setMatrixAt(slot, this._m);
       this.aPhase.array[slot] = pose.phase;
-      this.aAlpha.array[slot] = i === extracted ? 0 : fade * this.opacity * (0.28 + 0.72 * Math.pow(1 - Math.min(1, Math.max(0, (i - head) / 22)), 1.4));
+      this.aGold.array[slot] = cur * this.gold;
+      // past selves dim with age so the gilded one reads as the living butterfly
+      const trail = 0.12 + 0.3 * Math.pow(Math.max(0, 1 - Math.max(0, age) / 32), 1.5);
+      this.aAlpha.array[slot] = i === extracted ? 0 : fade * this.opacity * Math.max(trail, cur);
     }
     for (const m of [this.panels, this.edges, this.wings]) m.instanceMatrix.needsUpdate = true;
     this.aMark.needsUpdate = this.aCur.needsUpdate = this.aFade.needsUpdate = true;
-    this.aPhase.needsUpdate = this.aAlpha.needsUpdate = true;
+    this.aPhase.needsUpdate = this.aAlpha.needsUpdate = this.aGold.needsUpdate = true;
   }
 
   // Nearest still butterfly under a screen point (NDC), or -1.

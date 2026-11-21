@@ -13,6 +13,7 @@ attribute float aTheta;
 attribute float aIPhase;
 attribute float aIAlpha;
 attribute float aIHue;
+attribute float aIGold;
 #endif
 varying vec2 vPolar;
 varying vec3 vNormal;
@@ -20,15 +21,18 @@ varying vec3 vView;
 varying vec3 vLocal;
 varying float vAlpha;
 varying float vHue;
+varying float vGold;
 
 void main(){
   float phase = uPhase;
   vAlpha = 1.0;
   vHue = 0.0;
+  vGold = 0.0;
   #ifdef USE_INSTANCING
   phase = aIPhase;
   vAlpha = aIAlpha;
   vHue = aIHue;
+  vGold = aIGold;
   #endif
   float side = position.x >= 0.0 ? 1.0 : -1.0;
   vec3 p = wingLocalPos(side, aTheta, aRadial);
@@ -72,6 +76,7 @@ varying vec3 vView;
 varying vec3 vLocal;
 varying float vAlpha;
 varying float vHue;
+varying float vGold;
 
 vec3 hsv(float h, float s, float v){
   vec3 k = clamp(abs(fract(h + vec3(0.0, 2.0/3.0, 1.0/3.0))*6.0 - 3.0) - 1.0, 0.0, 1.0);
@@ -239,6 +244,13 @@ void main(){
   }
   col += vec3(1.0)*spec*uSpec*0.9;
   col += acc*burn*5.0;
+  // "the one now": gilded and lit from within
+  if (vGold > 0.001) {
+    vec3 gold = vec3(1.0, 0.6, 0.16);
+    vec3 gilt = gold * (0.55 + 0.35*lamb) * (1.0 - dark*0.55) + gold * (rim*2.2 + light*1.3) + vec3(1.0, 0.82, 0.5) * fres * 0.5;
+    col = mix(col, gilt * 1.15, vGold);
+    alpha = mix(alpha, max(alpha, 0.97), vGold);
+  }
   alpha *= alphaMul * vAlpha * uOpacity;
   if (uGhost > 0.5) {
     alpha *= 0.55 + 0.45*rim;
