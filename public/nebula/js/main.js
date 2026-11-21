@@ -15,7 +15,7 @@ import { SCENES } from './scenes.js';
 
 const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const easeIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const FPS = 16; // corridor frames per second at 1×
+const FPS = 12; // corridor frames per second at 1×
 const STORE = 'nebula.zoetrope.v1';
 const AUTO_EVERY = 12;
 
