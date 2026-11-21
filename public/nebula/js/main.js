@@ -96,8 +96,8 @@ const SHOTS = [
   {
     name: 'REST', dur: 9,
     fill(s, u, t, scene) {
-      lerpV(V(0.7, 1.7, 7.4), V(-0.4, 1.3, 6.6), easeIO(u), s.cam);
-      s.look.set(0.9, 0.3, 0);
+      lerpV(V(0.6, 0.95, 7.0), V(-0.4, 0.75, 6.3), easeIO(u), s.cam);
+      s.look.set(0.9, 0.35, 0);
       // the slab turns slowly in space; the butterfly rests on it
       const yaw = -0.35 + Math.sin(t * 0.22) * 0.55 + u * 0.4;
       const roll = Math.sin(t * 0.17) * 0.12;
@@ -111,7 +111,7 @@ const SHOTS = [
       s.bScale = 0.62; s.flap = 0.3;
       // resting: wings mostly closed, opening slowly now and then
       const open = sm(0.72, 1.0, Math.sin(t * 0.5) * 0.5 + 0.5);
-      s.base = 1.32 - open * 0.75; s.amp = 0.12 + open * 0.12;
+      s.base = 1.32 - open * 0.42; s.amp = 0.1 + open * 0.08;
       s.echo = 0.55; s.echoSpread = 0.25; s.echoToLight = false; s.echoStep = 0.5;
       s.echoDir.set(1, 0.02, -0.35).normalize();
       Object.assign(s.op, { frames: 0, lines: 0, gallery: 0, slab: 1, core: 0.45, dust: 0.45, bg: 0.25 });
