@@ -665,8 +665,12 @@ class App {
     const cam = this.camera;
     const fwd = this._v2.set(0, 0, -1).applyQuaternion(cam.quaternion);
     out.copy(cam.position).addScaledVector(fwd, 4.4);
-    if (cam.aspect > 1.1) out.addScaledVector(this._v.set(1, 0, 0).applyQuaternion(cam.quaternion), -0.6);
-    else out.addScaledVector(this._v.set(0, 1, 0).applyQuaternion(cam.quaternion), 0.35);
+    if (innerWidth > 760) out.addScaledVector(this._v.set(1, 0, 0).applyQuaternion(cam.quaternion), -0.6);
+    else {
+      // phones: the panel takes the lower half, so the butterfly floats in the upper half
+      const halfH = 4.4 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+      out.addScaledVector(this._v.set(0, 1, 0).applyQuaternion(cam.quaternion), halfH * 0.42);
+    }
     return out;
   }
 
@@ -708,7 +712,7 @@ class App {
     spot.y += Math.sin(this.world * 1.1) * 0.05;
     const camQ = this.camera.quaternion;
     const tq = this._q2.copy(camQ).multiply(this._q.setFromEuler(this._e.set(-0.25 + e.rotX, e.rotY, 0)));
-    const tScale = 0.62 * e.size;
+    const tScale = 0.62 * e.size * (innerWidth > 760 ? 1 : 0.78);
 
     // a pane of glass under the held butterfly, facing the viewer
     const down = this._v.set(0, -1, 0).applyQuaternion(camQ);

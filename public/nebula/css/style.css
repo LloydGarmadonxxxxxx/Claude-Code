@@ -235,14 +235,17 @@ body.rewinding .hud { color: #fff1d2; }
   .pause-hint { top: calc(96px + var(--st)); font-size: 11px; max-width: calc(100vw - 24px); white-space: nowrap; }
   .inspector, .drawer {
     left: calc(8px + var(--sl)); right: calc(8px + var(--sr)); width: auto; top: auto; bottom: calc(64px + var(--sb));
-    max-height: 56vh; max-height: 56dvh; overflow-y: auto; border-radius: 20px; transform: translateY(30px);
+    max-height: 50vh; max-height: 50dvh; overflow-y: auto; border-radius: 20px; transform: translateY(30px);
     background: linear-gradient(160deg, rgba(255, 248, 235, 0.06), rgba(255, 248, 235, 0.015) 45%), rgba(12, 11, 10, 0.88);
   }
   body.inspecting .inspector { transform: none; }
   .drawer.open { transform: none; }
   .handle { display: block; width: 38px; height: 4px; border-radius: 4px; background: rgba(255, 245, 225, 0.22); margin: -6px auto 10px; }
   .drawer .handle { margin: 9px auto 0; }
-  .inspector { padding-top: 14px; }
+  .inspector { padding: 14px 14px 12px; }
+  .inspector .i-tip { display: none; }
+  .inspector .row { margin: 9px 0 4px; }
+  .inspector .note { margin-top: 10px; }
   body.inspecting .drawer { display: none; }
   .toast { bottom: calc(70px + var(--sb)); white-space: normal; max-width: calc(100vw - 30px); text-align: center; }
   body.inspecting .toast, body.drawer-open .toast { bottom: auto; top: calc(100px + var(--st)); }
