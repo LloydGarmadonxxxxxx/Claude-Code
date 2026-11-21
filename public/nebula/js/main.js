@@ -323,10 +323,12 @@ class App {
         const [a, b] = [...pointers.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
         if (p.pinch) this.zoomBy(p.pinch / d);
+        this.lastInteract = this.world;
         p.pinch = d;
       } else if (p.down) {
         if (Math.hypot(e.clientX - p.down.x, e.clientY - p.down.y) > 6) p.down.moved = true;
         if (p.down.moved) {
+          this.lastInteract = this.world;
           const k = 3.2 / Math.max(innerWidth, innerHeight);
           if (this.inspect && this.inspect.phase !== 'in') {
             this.inspect.edits.rotY += dx * k * 1.6;
@@ -348,7 +350,7 @@ class App {
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
     c.addEventListener('pointerleave', () => { if (!pointers.size) p.hover = false; });
-    c.addEventListener('wheel', (e) => { e.preventDefault(); this.zoomBy(Math.exp(e.deltaY * 0.0009)); }, { passive: false });
+    c.addEventListener('wheel', (e) => { e.preventDefault(); this.lastInteract = this.world; this.zoomBy(Math.exp(e.deltaY * 0.0009)); }, { passive: false });
     c.addEventListener('dblclick', (e) => { e.preventDefault(); if (!this.inspect) this.toggleFullscreen(); });
     c.addEventListener('contextmenu', (e) => e.preventDefault());
     window.addEventListener('keydown', (e) => {
@@ -512,7 +514,19 @@ class App {
     p.active += ((p.hover ? 1 : 0) - p.active) * (1 - Math.exp(-dt * 3));
     p.sx += (p.x - p.sx) * (1 - Math.exp(-dt * 4));
     p.sy += (p.y - p.sy) * (1 - Math.exp(-dt * 4));
-    if (!p.down || this.inspect) { p.yaw *= Math.exp(-dt * 0.6); p.pitch *= Math.exp(-dt * 0.6); }
+    // Left alone, the view drifts — very slowly — back to the best angle on the butterfly.
+    const idleFor = this.world - (this.lastInteract ?? -1e9);
+    const idle = p.down && !this.inspect ? 0 : sm(1.5, 6, idleFor);
+    if (this.inspect) { p.yaw *= Math.exp(-dt * 0.6); p.pitch *= Math.exp(-dt * 0.6); }
+    else if (!p.down) {
+      const r = Math.exp(-dt * 0.11 * idle);
+      p.yaw *= r; p.pitch *= r;
+      p.zoom = 1 + (p.zoom - 1) * Math.exp(-dt * 0.09 * idle);
+    }
+    // ...and gently frames the gilded butterfly (not in GLASS REST, whose subject is the slab)
+    const biasTarget = !this.inspect && sc.id !== 'rest' ? 0.4 * idle : 0;
+    this.lookBias = (this.lookBias ?? 0) + (biasTarget - (this.lookBias ?? 0)) * (1 - Math.exp(-dt * 0.22));
+    if (this.lookBias > 0.001 && this.zoe.halo.visible) s.look.lerp(this.zoe.halo.position, this.lookBias);
     if (this.camera.aspect < 1 && (this.sceneIndex === 1 || this.sceneIndex === 3)) { s.cam.x *= 0.55; s.look.x *= 0.5; }
     const rel = this._v.copy(s.cam).sub(s.look);
     const sph = new THREE.Spherical().setFromVector3(rel);
