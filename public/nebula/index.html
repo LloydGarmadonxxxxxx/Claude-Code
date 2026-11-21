@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#020206" />
+  <meta name="description" content="NEBULA — 沉浸式 3D 光影粒子艺术互动网站。实时 WebGL 蝴蝶、粒子宇宙、时空隧道与音频响应。" />
+  <title>NEBULA · 沉浸式光影粒子艺术</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CradialGradient id='g'%3E%3Cstop offset='0' stop-color='%23fff'/%3E%3Cstop offset='.35' stop-color='%23ffe7c2'/%3E%3Cstop offset='1' stop-color='%237cc8ff' stop-opacity='0'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23050509'/%3E%3Ccircle cx='32' cy='32' r='22' fill='url(%23g)'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/build/three.module.min.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="stage" aria-label="NEBULA 3D 场景"></canvas>
+
+  <!-- Loading veil -->
+  <div id="veil" class="veil">
+    <div class="veil-mark">
+      <div class="veil-orb"></div>
+      <div class="veil-word">NEBULA</div>
+      <div class="veil-sub">正在点亮光影空间</div>
+    </div>
+  </div>
+
+  <!-- Transition title card -->
+  <div id="titleCard" class="title-card" aria-live="polite">
+    <div class="tc-index">MODE A</div>
+    <div class="tc-name">蝴蝶模式</div>
+    <div class="tc-en">LUMINOUS WING</div>
+  </div>
+
+  <div id="ui" class="ui">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-label="NEBULA">NEBULA</div>
+        <div class="tagline">IMMERSIVE LIGHT · PARTICLE ART</div>
+      </div>
+      <nav class="modes glass" id="modeTabs" aria-label="视觉模式"></nav>
+      <div class="actions">
+        <button class="st-switch" id="btnStudio" title="进入 3D 创作工作室 (T)" aria-label="创作模式">
+          <svg viewBox="0 0 24 24"><path d="M4 20l1-5L16.5 3.5a2.1 2.1 0 0 1 3 3L8 18z"/><path d="M14.5 5.5l3 3"/></svg><span>创作</span>
+        </button>
+        <button class="icon-btn" id="btnPresets" title="场景预设" aria-label="场景预设">
+          <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
+        </button>
+        <button class="icon-btn" id="btnDemo" title="自动演示" aria-label="自动演示">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M10 8.6v6.8l5.6-3.4z" class="fill"/></svg>
+        </button>
+        <button class="icon-btn" id="btnRandom" title="随机生成" aria-label="随机生成">
+          <svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" class="fill"/><circle cx="15.5" cy="15.5" r="1.3" class="fill"/><circle cx="12" cy="12" r="1.3" class="fill"/><circle cx="15.5" cy="8.5" r="1.3" class="fill"/><circle cx="8.5" cy="15.5" r="1.3" class="fill"/></svg>
+        </button>
+        <button class="icon-btn" id="btnSettings" title="设置" aria-label="设置">
+          <svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
+        </button>
+        <button class="icon-btn" id="btnFullscreen" title="全屏" aria-label="全屏">
+          <svg viewBox="0 0 24 24" class="ico-enter"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          <svg viewBox="0 0 24 24" class="ico-exit"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Left: presets + modes -->
+    <aside class="panel panel-left glass" id="panelLeft" aria-label="场景预设">
+      <div class="sheet-handle"></div>
+      <div class="panel-head">
+        <h2>场景预设</h2>
+        <button class="close-btn" data-close="panelLeft" aria-label="关闭">×</button>
+      </div>
+      <div class="panel-body">
+        <div class="preset-grid" id="presetList"></div>
+        <h3 class="sub-title">视觉模式</h3>
+        <div class="mode-list" id="modeList"></div>
+      </div>
+    </aside>
+
+    <!-- Right: parameters -->
+    <aside class="panel panel-right glass" id="panelRight" aria-label="参数控制">
+      <div class="sheet-handle"></div>
+      <div class="panel-head">
+        <h2>参数控制</h2>
+        <div class="head-actions">
+          <button class="text-btn" id="btnReset">恢复默认</button>
+          <button class="close-btn" data-close="panelRight" aria-label="关闭">×</button>
+        </div>
+      </div>
+      <div class="panel-body" id="controls">
+        <section class="group" data-group="particles">
+          <h3>粒子</h3>
+          <div class="ctl" data-key="count" data-label="粒子数量" data-fmt="k"></div>
+          <div class="ctl" data-key="size" data-label="粒子大小"></div>
+          <div class="ctl" data-key="speed" data-label="运动速度"></div>
+          <div class="ctl" data-key="spread" data-label="扩散范围"></div>
+          <div class="ctl" data-key="glow" data-label="发光强度"></div>
+          <div class="seg-row">
+            <span class="seg-label">指针作用</span>
+            <div class="seg" id="mouseMode">
+              <button data-v="repel">排斥</button><button data-v="attract">吸引</button><button data-v="swirl">漩涡</button>
+            </div>
+          </div>
+        </section>
+        <section class="group" data-group="subject">
+          <h3>主体与空间</h3>
+          <div class="ctl" data-key="scale" data-label="主体缩放"></div>
+          <div class="ctl" data-key="flap" data-label="翅膀扇动速度"></div>
+          <div class="ctl" data-key="rotate" data-label="空间旋转速度"></div>
+          <div class="ctl" data-key="anim" data-label="整体动画速度"></div>
+        </section>
+        <section class="group" data-group="light">
+          <h3>光影</h3>
+          <div class="ctl" data-key="light" data-label="光线亮度"></div>
+          <div class="ctl" data-key="bloom" data-label="泛光强度"></div>
+          <div class="ctl" data-key="dof" data-label="景深强度"></div>
+          <div class="ctl" data-key="blur" data-label="动态模糊"></div>
+        </section>
+        <section class="group" data-group="color">
+          <h3>色彩</h3>
+          <div class="colors">
+            <label class="swatch"><input type="color" data-color="bg" /><span>背景</span></label>
+            <label class="swatch"><input type="color" data-color="body" /><span>主体</span></label>
+            <label class="swatch"><input type="color" data-color="particle" /><span>粒子</span></label>
+            <label class="swatch"><input type="color" data-color="accent" /><span>辅色</span></label>
+            <label class="swatch"><input type="color" data-color="glow" /><span>光晕</span></label>
+          </div>
+        </section>
+        <section class="group" data-group="audio">
+          <h3>音乐与音频响应</h3>
+          <div class="btn-row">
+            <label class="chip-btn" title="上传音乐文件">
+              <input type="file" id="audioFile" accept="audio/*" hidden />
+              <svg viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></svg>上传音乐
+            </label>
+            <button class="chip-btn" id="btnMic"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>麦克风</button>
+            <button class="chip-btn" id="btnDemoTrack"><svg viewBox="0 0 24 24"><path d="M3 12h3l2-6 4 12 3-9 2 3h4"/></svg>内置音轨</button>
+            <button class="chip-btn" id="btnAudioStop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>停止</button>
+          </div>
+          <div class="audio-status" id="audioStatus">未连接音频 · 场景正常运行</div>
+          <div class="meters">
+            <div class="meter"><span>低频</span><i id="mBass"></i></div>
+            <div class="meter"><span>中频</span><i id="mMid"></i></div>
+            <div class="meter"><span>高频</span><i id="mTreble"></i></div>
+          </div>
+          <div class="ctl" data-key="audioSens" data-label="响应灵敏度"></div>
+        </section>
+        <section class="group" data-group="export">
+          <h3>截图与录制</h3>
+          <div class="btn-row">
+            <button class="chip-btn" id="btnShot"><svg viewBox="0 0 24 24"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.5-2h5L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><circle cx="12" cy="12.5" r="3.4"/></svg>PNG 截图</button>
+            <button class="chip-btn" id="btnRec"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="3.2" class="fill rec-dot"/></svg><span id="recLabel">录制 WebM</span></button>
+            <button class="chip-btn" id="btnCopy"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>复制配置</button>
+          </div>
+          <p class="note">复制的配置包含一个分享链接，打开即可还原当前场景。</p>
+        </section>
+        <section class="group" data-group="quality">
+          <h3>画质</h3>
+          <div class="seg-row">
+            <span class="seg-label">渲染质量</span>
+            <div class="seg" id="qualityMode">
+              <button data-v="auto">自动</button><button data-v="high">高</button><button data-v="mid">中</button><button data-v="low">低</button>
+            </div>
+          </div>
+          <p class="note" id="qualityNote"></p>
+        </section>
+      </div>
+    </aside>
+
+    <!-- Bottom HUD -->
+    <footer class="hud">
+      <div class="hud-left">
+        <div class="hud-mode"><span class="hud-key" id="hudKey">A</span><span id="hudMode">蝴蝶模式</span></div>
+        <div class="hud-frame mono" id="hudFrame">FRAME 0001 · T+0.00S</div>
+      </div>
+      <div class="hud-right glass">
+        <div class="stat"><span class="lbl">FPS</span><span class="val mono" id="hudFps">--</span></div>
+        <div class="stat"><span class="lbl">粒子</span><span class="val mono" id="hudCount">--</span></div>
+        <div class="stat stat-state"><span class="dot" id="hudDot"></span><span class="val" id="hudState">渲染中</span></div>
+        <div class="stat rec-stat" id="hudRec"><span class="dot rec"></span><span class="val mono" id="hudRecTime">00:00</span></div>
+        <button class="icon-btn small" id="btnPlay" title="播放 / 暂停 (空格)" aria-label="播放或暂停">
+          <svg viewBox="0 0 24 24" class="ico-pause"><path d="M8.5 6v12M15.5 6v12"/></svg>
+          <svg viewBox="0 0 24 24" class="ico-play"><path d="M8 5.8v12.4L18 12z" class="fill"/></svg>
+        </button>
+      </div>
+    </footer>
+
+    <div id="hint" class="hint">拖动旋转 · 滚轮缩放 · 点击释放粒子 · 点击蝴蝶触发飞舞</div>
+  </div>
+
+  <div id="studio" class="studio" aria-label="3D 创作工作室"></div>
+
+  <button id="exitImmersive" class="exit-immersive" aria-label="退出沉浸模式">退出沉浸</button>
+  <div id="toast" class="toast" role="status"></div>
+
+  <div id="fatal" class="fatal" hidden>
+    <div class="fatal-card glass">
+      <div class="logo">NEBULA</div>
+      <h2>无法启动 3D 渲染</h2>
+      <p id="fatalMsg">你的浏览器或设备暂时无法创建 WebGL 2 上下文。</p>
+      <p class="note">请尝试：使用最新版 Chrome / Edge / Safari / Firefox；在浏览器设置中开启“硬件加速”；或换一台设备打开。</p>
+      <button class="text-btn" onclick="location.reload()">重新加载</button>
+    </div>
+  </div>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
