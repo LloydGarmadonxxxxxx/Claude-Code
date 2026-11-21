@@ -299,9 +299,11 @@ export class Butterfly {
         const back = Math.min(this.histFilled - 1, (i + 1) * step);
         const hi = (this.histHead - 1 - back + HISTORY * 2) % HISTORY;
         const e = this.hist[hi];
+        // attitude and wing phase come from the recent past (a time-slice),
+        // position always extends from where the butterfly is now
         e.m.decompose(this._v, this._q, this._s);
         const off = (i + 1) * this.echoStep * echoSpread * s;
-        this._v.addScaledVector(this._echoDir, off);
+        this._v.copy(this.pos).addScaledVector(this._echoDir, off);
         this._s.multiplyScalar(1 - i * 0.012 * echoSpread);
         this._m.compose(this._v, this._q, this._s);
         this.ghosts.setMatrixAt(i, this._m);

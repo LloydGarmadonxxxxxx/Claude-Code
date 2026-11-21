@@ -290,6 +290,7 @@ class Film {
     const target = (index + dir + SHOTS.length) % SHOTS.length;
     for (let i = 0; i < target; i++) start += SHOTS[i].dur;
     this.t = start + 0.01;
+    this.bfly.histFilled = 0;
   }
 
   tap(n) {
@@ -372,6 +373,10 @@ class Film {
     p.sx += (p.x - p.sx) * (1 - Math.exp(-dt * 4));
     p.sy += (p.y - p.sy) * (1 - Math.exp(-dt * 4));
     if (!p.down) { p.yaw *= Math.exp(-dt * 0.6); p.pitch *= Math.exp(-dt * 0.6); }
+    if (this.camera.aspect < 1 && (index === 1 || index === 3)) {
+      s.look.lerp(this._v.copy(s.bpos).lerp(s.lightPos, 0.12), Math.min(0.8, (1 - this.camera.aspect) * 1.6));
+      s.cam.x *= 0.6;
+    }
     const camTarget = this._v.copy(s.cam).sub(s.look);
     const dist = camTarget.length() * p.zoom;
     const sph = new THREE.Spherical().setFromVector3(camTarget);
