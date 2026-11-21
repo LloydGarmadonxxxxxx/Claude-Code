@@ -70,7 +70,7 @@ export function createUI(app) {
     if (!ins) return;
     const i = ins.i;
     $('#inspFrame').textContent = `FRAME ${pad((i % 76) + 1)} / 76`;
-    $('#inspLap').textContent = `第 ${Math.floor(i / 76) + 1} 轮 · T+${(i / 24).toFixed(2)}s`;
+    $('#inspLap').textContent = `第 ${Math.floor(i / 76) + 1} 轮 · T+${(i / 16).toFixed(2)}s`;
     const rec = ins.recordId && app.records.find((r) => r.id === ins.recordId);
     $('#inspBadge').textContent = rec ? `记录 ${rec.n}` : '未记录';
     $('#inspBadge').classList.toggle('on', !!rec);
@@ -181,7 +181,7 @@ export function createUI(app) {
     const dir = rate < -0.5 ? '◀◀ ' : rate > FAST ? '▶▶ ' : '';
     hud.textContent = `${dir}FRAME ${pad(frame)} / 76 · 第 ${lap} 轮 · T+${t.toFixed(2)}S`;
   };
-  const FAST = 60;
+  const FAST = 40;
   ui.cursor = (over) => body.classList.toggle('over-butterfly', over);
   let toastT;
   ui.toast = (msg) => {

@@ -7,7 +7,7 @@ import { wingVertex, wingFragment } from './shaders/wing.js';
 // flight, exactly like a flipbook.
 
 export const CYCLE = 76;
-const SLOTS = 42;
+const SLOTS = 56;
 const H = 4.2;
 
 function squareRing(inner) {
@@ -29,12 +29,14 @@ function squareRing(inner) {
 
 // Pose of the butterfly inside frame i (absolute index; the cycle repeats).
 const _e = new THREE.Euler();
+export const FRAMES_PER_BEAT = 24; // one slow wingbeat spread over 24 frames
+export const PATH_FRAMES = 160;    // one loop of the flight path
 export function poseOf(i, out = {}) {
-  const a = (((i % CYCLE) + CYCLE) % CYCLE) / CYCLE * Math.PI * 2;
-  out.x = 1.2 * Math.sin(a * 2);
-  out.y = 0.6 * Math.sin(a * 3 + 0.6) + 0.15;
-  out.phase = i * (Math.PI * 2 / 12); // twelve frames per wingbeat
-  _e.set(-0.18 + 0.12 * Math.sin(a * 3), 0.4 * Math.cos(a * 2), -0.28 * Math.cos(a * 2));
+  const a = (i / PATH_FRAMES) * Math.PI * 2;
+  out.x = 1.1 * Math.sin(a * 2);
+  out.y = 0.5 * Math.sin(a * 3 + 0.6) + 0.15;
+  out.phase = i * (Math.PI * 2 / FRAMES_PER_BEAT);
+  _e.set(-0.18 + 0.12 * Math.sin(a * 3), 0.38 * Math.cos(a * 2), -0.26 * Math.cos(a * 2));
   out.quat = (out.quat || new THREE.Quaternion()).setFromEuler(_e);
   return out;
 }
@@ -48,7 +50,7 @@ export class Zoetrope {
   constructor(scene, bfly, colors) {
     this.group = new THREE.Group();
     scene.add(this.group);
-    this.spacing = 1.5;
+    this.spacing = 1.1;
     this.lensZ = 2.2;
     this.scale = 0.46;
     this.disposables = [];
@@ -195,7 +197,7 @@ export class Zoetrope {
       this.aPhase.array[slot] = pose.phase;
       this.aGold.array[slot] = cur * this.gold;
       // past selves dim with age so the gilded one reads as the living butterfly
-      const trail = 0.12 + 0.3 * Math.pow(Math.max(0, 1 - Math.max(0, age) / 32), 1.5);
+      const trail = 0.1 + 0.28 * Math.pow(Math.max(0, 1 - Math.max(0, age) / 44), 1.5);
       this.aAlpha.array[slot] = i === extracted ? 0 : fade * this.opacity * Math.max(trail, cur);
     }
     for (const m of [this.panels, this.edges, this.wings]) m.instanceMatrix.needsUpdate = true;

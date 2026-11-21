@@ -15,7 +15,7 @@ import { SCENES } from './scenes.js';
 
 const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const easeIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const FPS = 24; // corridor frames per second at 1× (film rate)
+const FPS = 16; // corridor frames per second at 1×
 const STORE = 'nebula.zoetrope.v1';
 const AUTO_EVERY = 12;
 
@@ -286,7 +286,7 @@ class App {
       const r = queue.shift();
       if (!r) return;
       const from = this.head, to = r.i;
-      this.travel = { from, to, t: 0, dur: Math.min(3.8, Math.max(1.2, Math.abs(to - from) / 90)), record: r, queue, next: go };
+      this.travel = { from, to, t: 0, dur: Math.min(3.8, Math.max(1.2, Math.abs(to - from) / 60)), record: r, queue, next: go };
       document.body.classList.toggle('rewinding', to < from);
       document.body.classList.toggle('forwarding', to > from);
       this.ui.travel(r, queue.length);
