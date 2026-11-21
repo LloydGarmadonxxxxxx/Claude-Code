@@ -179,7 +179,6 @@ class App {
     if (on && this.travel) return;
     if (on && this.inspect) this.putBack();
     this.holdRewind = on;
-    document.body.classList.toggle('rewinding', on);
     this.ui.sync();
   }
 
@@ -455,6 +454,7 @@ class App {
       rate = (this.head - prev) / Math.max(dt, 1e-3);
       if (tr.t >= 1) {
         this.head = tr.to;
+        this.vel = 0; this.ramp = { goal: 0, stage: 'done' };
         document.body.classList.remove('rewinding', 'forwarding');
         const r = tr.record;
         this.travel = null;
@@ -464,15 +464,13 @@ class App {
         this.ui.highlight(r.id);
         if (tr.queue.length) this._holdT = setTimeout(() => this.putBack(tr.next), 2600);
       }
-    } else if (this.holdRewind) {
-      rate = -FPS * 2 * this.speed;
+    } else {
+      rate = this.drive(dt);
       this.head = Math.max(0, this.head + rate * dt);
-      if (this.head <= 0) rate = 0;
-    } else if (this.playing && !this.inspect) {
-      rate = FPS * this.speed;
-      this.head += rate * dt;
+      if (this.head <= 0 && rate < 0) { this.head = 0; this.vel = 0; rate = 0; }
     }
     this.rate = rate;
+    if (!this.travel) document.body.classList.toggle('rewinding', rate < -0.3);
 
     // ---- scenes (manual or auto)
     if (this.auto && this.playing && !this.inspect && !this.travel) {
@@ -626,6 +624,42 @@ class App {
       ctx.drawImage(src, cx - cw / 2, cy - ch / 2, cw, ch, 0, 0, 240, 150);
       resolve(c.toDataURL('image/jpeg', 0.7));
     } catch (e) { resolve(null); }
+  }
+
+  // The corridor's velocity never jumps: changing direction (or starting/stopping)
+  // slows from fast to slow, rests a moment, then picks up from slow to fast.
+  drive(dt) {
+    const goal = this.holdRewind ? -FPS * 2 * this.speed : (this.playing && !this.inspect ? FPS * this.speed : 0);
+    if (this.vel === undefined) { this.vel = goal; this.ramp = { goal, stage: 'done' }; }
+    const r = this.ramp;
+    if (r.goal !== goal) {
+      const v0 = this.vel;
+      const flip = Math.abs(v0) > 0.05 && (goal === 0 || Math.sign(goal) !== Math.sign(v0));
+      const fromRest = Math.abs(v0) <= 0.05 && goal !== 0;
+      const sameDir = !flip && !fromRest;
+      this.ramp = { goal, v0, t: 0, stage: flip ? 'decel' : fromRest ? 'hold' : 'adjust', sameDir };
+    }
+    const R = this.ramp;
+    const DECEL = 0.75, HOLD = 0.3, ACCEL = 0.95, ADJUST = 0.45;
+    R.t += dt;
+    if (R.stage === 'decel') {
+      const u = Math.min(1, R.t / DECEL);
+      this.vel = R.v0 * (1 - u) * (1 - u);           // fast → slow (ease-out)
+      if (u >= 1) { this.vel = 0; R.t = 0; R.stage = R.goal === 0 ? 'done' : 'hold'; }
+    } else if (R.stage === 'hold') {
+      this.vel = 0;                                   // a breath of stillness
+      if (R.t >= HOLD) { R.t = 0; R.stage = 'accel'; }
+    } else if (R.stage === 'accel') {
+      const u = Math.min(1, R.t / ACCEL);
+      this.vel = R.goal * u * u;                      // slow → fast (ease-in)
+      if (u >= 1) { this.vel = R.goal; R.stage = 'done'; }
+    } else if (R.stage === 'adjust') {
+      const u = Math.min(1, R.t / ADJUST);
+      const e = u * u * (3 - 2 * u);
+      this.vel = R.v0 + (R.goal - R.v0) * e;          // speed changes glide
+      if (u >= 1) { this.vel = R.goal; R.stage = 'done'; }
+    } else this.vel = R.goal;
+    return this.vel;
   }
 
   // Where the held butterfly floats: in front of the lens, above a pane of glass.
