@@ -221,69 +221,6 @@ const glitter = new THREE.Points(glGeo, new THREE.ShaderMaterial({
 }));
 scene.add(glitter);
 
-/* ---------------- falling snow ---------------- */
-const MAXF = MOBILE ? 36000 : 70000;
-const BOX = new THREE.Vector3(44, 20, 44);
-const fSeed = new Float32Array(MAXF * 4);
-for (let i = 0; i < MAXF; i++) fSeed.set([rnd() * BOX.x, rnd() * BOX.z, rnd() * BOX.y, rnd()], i * 4);
-const fGeo = new THREE.BufferGeometry();
-fGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXF * 3), 3));
-fGeo.setAttribute('aSeed', new THREE.BufferAttribute(fSeed, 4));
-fGeo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e6);
-const fU = {
-  uTime: { value: 0 }, uSpeed: { value: 1 }, uScale: { value: 600 }, uWind: { value: new THREE.Vector2() },
-  uBox: { value: BOX }, uCam: { value: new THREE.Vector3() }, uLampPos: { value: new THREE.Vector3() }, uLamp: { value: 1 },
-  uColor: { value: new THREE.Color() }, uGlow: { value: new THREE.Color('#ffb46a') }, uFog: { value: 0.02 }, uSway: { value: 1 }, uBig: { value: 0 },
-};
-const flakes = new THREE.Points(fGeo, new THREE.ShaderMaterial({
-  uniforms: fU, transparent: true, depthWrite: false,
-  vertexShader: `
-    uniform float uTime, uSpeed, uScale, uLamp, uFog, uSway, uBig; uniform vec2 uWind; uniform vec3 uBox, uCam, uLampPos;
-    attribute vec4 aSeed; varying float vA, vGlow, vBlur, vTw;
-    void main(){
-      float r = aSeed.w;
-      vec3 p;
-      p.y = mod(aSeed.z - uTime * uSpeed * (0.55 + 0.9 * r), uBox.y);
-      float sw = uTime * (0.5 + r * 1.3) + r * 60.0;
-      float amp = 0.32 * (0.4 + r) * uSway;
-      p.x = aSeed.x + uWind.x * (0.7 + 0.6 * r) + sin(sw) * amp;
-      p.z = aSeed.y + uWind.y * (0.7 + 0.6 * r) + cos(sw * 0.83) * amp;
-      p.xz = uCam.xz + mod(p.xz - uCam.xz + uBox.xz * 0.5, uBox.xz) - uBox.xz * 0.5;
-      vec4 mv = modelViewMatrix * vec4(p, 1.0);
-      float dist = max(-mv.z, 0.05);
-      float world = (0.014 + 0.034 * r * r) * (1.0 + uBig * 0.9);
-      float px = world * uScale / dist;
-      vBlur = smoothstep(2.6, 0.5, dist);
-      px *= 1.0 + vBlur * 1.6;
-      float fogF = exp(-uFog * uFog * dist * dist);
-      vA = clamp(px / 1.3, 0.25, 1.0) * (1.0 - vBlur * 0.6) * (0.35 + 0.65 * fogF)
-         * smoothstep(0.0, 0.25, p.y) * (1.0 - smoothstep(uBox.x * 0.4, uBox.x * 0.5, length(p.xz - uCam.xz)));
-      vec3 dl = p - uLampPos;
-      vGlow = uLamp * exp(-dot(dl, dl) / 4.5);
-      float pick = step(0.78, fract(r * 37.31));
-      float tw = pow(0.5 + 0.5 * sin(uTime * (1.6 + fract(r * 91.7) * 4.0) + r * 90.0), 8.0);
-      vTw = pick * tw * (1.0 - vBlur) + vGlow * 0.35 * tw;
-      gl_PointSize = clamp(px, 1.4, 52.0) * 2.4;
-      gl_Position = projectionMatrix * mv;
-    }`,
-  fragmentShader: `
-    uniform vec3 uColor, uGlow; varying float vA, vGlow, vBlur, vTw;
-    void main(){
-      vec2 c = gl_PointCoord - 0.5;
-      float d = length(c) * 2.4;
-      float core = 1.0 - smoothstep(1.0 - (0.32 + 0.6 * vBlur), 1.0, d);
-      float halo = exp(-d * d * 1.1) * (0.16 + 0.22 * vTw) * (1.0 - vBlur * 0.8);
-      vec2 q = abs(c) * 2.0;
-      float ray = (exp(-q.x * 55.0) * (1.0 - q.y) + exp(-q.y * 55.0) * (1.0 - q.x)) * vTw * 0.9;
-      vec3 col = (uColor + uGlow * vGlow * 2.2) * (1.0 + vTw * 1.6);
-      vec3 hcol = mix(vec3(0.82, 0.9, 1.0), vec3(1.0, 0.78, 0.5), clamp(vGlow, 0.0, 1.0)) * (uColor.r * 1.3 + uGlow * vGlow);
-      float a = max(core, halo + ray);
-      gl_FragColor = vec4(mix(hcol, col, core), clamp(a, 0.0, 1.0) * vA);
-    }`,
-}));
-flakes.frustumCulled = false;
-scene.add(flakes);
-
 /* ---------------- placements ---------------- */
 const P = {
   cabin: { x: 6.8, z: -8.5, ry: -0.42 },
@@ -291,12 +228,11 @@ const P = {
   tree: { x: -4.4, z: -2.6 },
 };
 const LAMP_LIGHT_POS = new THREE.Vector3(P.lamp.x, 3.45, P.lamp.z);
-fU.uLampPos.value.copy(LAMP_LIGHT_POS);
 glU.uLampPos.value.copy(LAMP_LIGHT_POS);
 
 const lampLight = new THREE.PointLight(0xffb066, 20, 16, 2);
 lampLight.position.copy(LAMP_LIGHT_POS);
-lampLight.castShadow = !MOBILE;
+lampLight.castShadow = false;
 lampLight.shadow.mapSize.set(512, 512);
 lampLight.shadow.bias = -0.002;
 scene.add(lampLight);
@@ -391,6 +327,234 @@ function shakeTree() {
   }
   puffGeo.attributes.position.needsUpdate = true;
   puffT = 0;
+}
+
+/* ---------------- falling snow ----------------
+   Every flake is a camera-facing quad stretched along its own screen-space motion (motion blur),
+   widened by depth of field, and lit by the scene's real lights (lamp, window, tree, sky).
+   Positions are analytic: fall and wind are integrated on the CPU, so speed changes never make flakes jump. */
+const SNOW_VERT = /* glsl */`
+  #define SPI 3.14159265
+  uniform float uTime, uFall, uFallV, uExpo, uScale, uAper, uFocus, uSize, uTurb, uFlutter, uGain, uFog, uDriftAmt, uFadeBottom;
+  uniform float uLampI, uWinI, uTreeI, uSunI;
+  uniform vec2 uWind, uWindV, uRes;
+  uniform vec3 uBox, uCenter, uCam, uAmb, uFogCol, uLampPos, uLampCol, uWinPos, uWinCol, uTreePos, uTreeCol, uSunCol;
+  attribute vec4 aSeed;
+  attribute vec4 aSeed2;
+  varying vec2 vLoc;
+  varying float vL, vR, vSoft, vA;
+  varying vec3 vCol;
+
+  float groundH(vec2 xz) {
+    float r = length(vec2(xz.x, xz.y - 2.0));
+    float k = smoothstep(27.0, 60.0, r);
+    return k * (1.4 + sin(xz.x * 0.06) * 1.3 + sin(xz.y * 0.045 + 1.3) * 1.6 + sin((xz.x + xz.y) * 0.12) * 0.5) - 0.02;
+  }
+  // smooth, spatially coherent eddies (neighbouring flakes move together)
+  vec3 turb(vec3 q, float t) {
+    return vec3(
+      sin(dot(q, vec3(0.31, 0.47, 0.19)) + t * 0.37) + 0.6 * sin(dot(q, vec3(-0.73, 0.29, 0.61)) + t * 0.61 + 1.3) + 0.35 * sin(dot(q, vec3(1.3, -0.9, 0.4)) + t * 1.1),
+      0.45 * sin(dot(q, vec3(0.37, -0.21, 0.52)) + t * 0.53 + 4.0) + 0.3 * sin(dot(q, vec3(-0.9, 0.7, -0.6)) + t * 1.3),
+      sin(dot(q, vec3(-0.41, 0.33, 0.27)) + t * 0.43 + 2.1) + 0.6 * sin(dot(q, vec3(0.57, -0.61, 0.83)) + t * 0.71 + 0.4) + 0.35 * sin(dot(q, vec3(-1.1, 0.8, 1.2)) + t * 0.97 + 2.0));
+  }
+  vec3 flakePos(float fall, vec2 wind, float t) {
+  #ifdef DRIFT
+    float h = aSeed.z;
+    float k = 0.55 + 0.45 * h + 0.15 * aSeed2.y;
+    vec3 p = vec3(aSeed.x + wind.x * k, 0.0, aSeed.y + wind.y * k);
+    p.xz = uCenter.xz + mod(p.xz - uCenter.xz + uBox.xz * 0.5, uBox.xz) - uBox.xz * 0.5;
+    float hop = abs(sin(t * (3.0 + 5.0 * aSeed2.z) + aSeed2.w * 40.0));
+    float g = groundH(p.xz);
+    p.y = g + 0.015 + h * h * h * 1.5 * uDriftAmt + hop * 0.05 * (1.0 - h);
+    p += turb(vec3(p.x - wind.x, p.y * 2.0, p.z - wind.y) * 1.4, t * 1.8) * vec3(0.3, 0.08, 0.3);
+    p.y = max(p.y, g + 0.01);
+    return p;
+  #else
+    float vk = 0.65 + 0.7 * aSeed2.x;
+    float wk = 0.88 + 0.24 * aSeed2.y;
+    vec3 p = vec3(aSeed.x + wind.x * wk, aSeed.z - fall * vk, aSeed.y + wind.y * wk);
+    p = uCenter + mod(p - uCenter + uBox * 0.5, uBox) - uBox * 0.5;
+    p += turb(vec3(p.x - wind.x, p.y, p.z - wind.y) * 0.8, t) * uTurb;
+    float z = aSeed2.z;
+    float w = 3.0 + 6.0 * z;
+    float ph = aSeed2.w * 60.0;
+    float A = uFlutter * (0.1 + 1.2 * pow(fract(z * 13.7), 2.0));
+    float spiral = step(0.72, aSeed2.w);
+    p.x += A * (sin(w * t + ph) + 0.35 * sin(2.3 * w * t + ph * 1.7));
+    p.z += A * (mix(sin(0.83 * w * t + ph * 2.1), cos(w * t + ph), spiral) + 0.35 * sin(1.7 * w * t + ph * 0.6));
+    return p;
+  #endif
+  }
+  // point light on a small ice aggregate: inverse square + forward-scattering phase (Henyey-Greenstein, g = 0.45)
+  vec3 pointL(vec3 p, vec3 V, vec3 lp, vec3 lc, float I, float range) {
+    vec3 L = p - lp;
+    float d2 = max(dot(L, L), 0.09);
+    float d = sqrt(d2);
+    float cut = clamp(1.0 - pow(d / range, 4.0), 0.0, 1.0);
+    float hg = 0.7975 / pow(1.2025 - 0.9 * dot(L / d, V), 1.5);
+    return lc * (I / d2 * cut * cut * (0.5 + 0.5 * hg) * 0.92 / SPI);
+  }
+  void main() {
+    float t = uTime;
+    vec3 p1 = flakePos(uFall, uWind, t);
+    float dist = length(p1 - uCam);
+    float vis = smoothstep(0.25, 0.7, dist);
+  #ifdef DRIFT
+    vec2 e2 = abs(p1.xz - uCenter.xz) / (uBox.xz * 0.5);
+    vis *= (1.0 - smoothstep(0.7, 1.0, max(e2.x, e2.y))) * uDriftAmt * (1.0 - 0.5 * aSeed.z);
+  #else
+    float gy = groundH(p1.xz);
+    vis *= smoothstep(gy - 0.01, gy + 0.1, p1.y);
+    vec3 e = (p1 - uCenter) / (uBox * 0.5);
+    vis *= 1.0 - smoothstep(0.78, 1.0, max(abs(e.x), abs(e.z)));
+    vis *= 1.0 - smoothstep(0.8, 1.0, e.y);
+    vis *= 1.0 - uFadeBottom * smoothstep(0.8, 1.0, -e.y);
+  #endif
+    float fogT = exp(-uFog * uFog * dist * dist);
+    vec4 c1 = projectionMatrix * viewMatrix * vec4(p1, 1.0);
+    if (vis < 0.003 || fogT < 0.02 || c1.w < 0.2) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+
+    // where the flake was when the "shutter" opened -> streak
+    vec3 p0 = flakePos(uFall - uFallV * uExpo, uWind - uWindV * uExpo, t - uExpo);
+    if (distance(p0, p1) > 1.5) p0 = p1;
+    vec4 c0 = projectionMatrix * viewMatrix * vec4(p0, 1.0);
+    if (c0.w < 0.2) c0 = c1;
+    vec2 hr = uRes * 0.5;
+    vec2 s1 = c1.xy / c1.w * hr;
+    vec2 s0 = c0.xy / c0.w * hr;
+
+    float diam = uSize * (0.45 + 1.1 * aSeed.w * aSeed.w);
+  #ifdef DRIFT
+    diam *= 0.5;
+  #endif
+    float sharp = 0.5 * diam * uScale / c1.w;
+    float coc = uAper * abs(1.0 / c1.w - 1.0 / uFocus);
+    float rad = sqrt(sharp * sharp + coc * coc);
+    float rd = max(rad, 0.75);
+    vec2 dv = s1 - s0;
+    float len = length(dv);
+    if (len > 180.0) { s0 = s1 - dv * (180.0 / len); len = 180.0; }
+    vec2 ax = len > 0.01 ? (s1 - s0) / len : vec2(0.0, 1.0);
+    vec2 pr = vec2(ax.y, -ax.x);
+    float hl = len * 0.5 + rd + 1.0;
+    float hw = rd + 1.0;
+    vec2 sp = (s0 + s1) * 0.5 + ax * (position.y * hl) + pr * (position.x * hw);
+    vLoc = vec2(position.x * hw, position.y * hl);
+    vL = len * 0.5;
+    vR = rd;
+    vSoft = clamp(coc / max(rad, 1e-4), 0.0, 1.0);
+    // the flake's light is spread over its blurred footprint (energy conserving)
+    float energy = (SPI * sharp * sharp) / (SPI * rd * rd + 2.0 * rd * len);
+    vA = clamp(energy * uGain, 0.0, 0.92) * vis;
+
+    vec3 V = normalize(uCam - p1);
+    float lampMask = mix(0.15, 1.0, smoothstep(uLampPos.y + 0.55, uLampPos.y + 0.05, p1.y));
+    vec3 lamp = pointL(p1, V, uLampPos, uLampCol, uLampI, 16.0) * lampMask;
+    vec3 win = pointL(p1, V, uWinPos, uWinCol, uWinI, 11.0);
+    vec3 tree = pointL(p1, V, uTreePos, uTreeCol, uTreeI, 9.0);
+    // tumbling ice facets occasionally flash in direct light
+    float tw = sin(t * (1.5 + 4.5 * aSeed2.z) + aSeed2.w * 31.0);
+    float glint = pow(max(tw, 0.0), 36.0) * step(0.4, fract(aSeed2.y * 7.31));
+    vec3 col = uAmb * (0.9 + 0.2 * aSeed2.x) + lamp * (1.0 + 5.0 * glint) + (win + tree) * (1.0 + 3.0 * glint) + uSunCol * (uSunI * 0.07 * glint);
+    vCol = mix(col, uFogCol, 1.0 - fogT);
+    gl_Position = vec4(sp / hr * c1.w, c1.z, c1.w);
+  }`;
+const SNOW_FRAG = /* glsl */`
+  varying vec2 vLoc;
+  varying float vL, vR, vSoft, vA;
+  varying vec3 vCol;
+  void main() {
+    float d = length(vec2(vLoc.x, max(abs(vLoc.y) - vL, 0.0)));
+    float w = mix(1.0, 0.95 * vR, vSoft);
+    float a = (1.0 - smoothstep(vR - w, vR + 0.5 * (1.0 - vSoft) + 0.2 * vR * vSoft, d)) * vA;
+    if (a < 0.003) discard;
+    gl_FragColor = vec4(vCol, a);
+  }`;
+
+const SNOW_SHARED = {
+  uTime: { value: 0 }, uFall: { value: 0 }, uFallV: { value: 1 }, uExpo: { value: 1 / 55 },
+  uWind: { value: new THREE.Vector2() }, uWindV: { value: new THREE.Vector2() },
+  uScale: { value: 600 }, uAper: { value: 6 }, uFocus: { value: 12 }, uRes: { value: new THREE.Vector2(1, 1) },
+  uSize: { value: 0.012 }, uTurb: { value: 0.4 }, uFlutter: { value: 0.04 }, uGain: { value: 4.0 }, uFog: { value: 0.02 },
+  uDriftAmt: { value: 0 }, uCam: { value: new THREE.Vector3() }, uAmb: { value: new THREE.Color() }, uFogCol: { value: new THREE.Color() },
+  uLampPos: { value: lampLight.position }, uLampCol: { value: new THREE.Color() }, uLampI: { value: 0 },
+  uWinPos: { value: winLight.position }, uWinCol: { value: new THREE.Color() }, uWinI: { value: 0 },
+  uTreePos: { value: treeLight.position }, uTreeCol: { value: treeLight.color }, uTreeI: { value: 0 },
+  uSunCol: { value: new THREE.Color() }, uSunI: { value: 0 },
+};
+function makeSnowLayer(max, box, opts = {}) {
+  const g = new THREE.InstancedBufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3));
+  g.setIndex([0, 1, 2, 0, 2, 3]);
+  const a = new Float32Array(max * 4), b = new Float32Array(max * 4);
+  for (let i = 0; i < max; i++) {
+    a.set([rnd() * box.x, rnd() * box.z, opts.drift ? rnd() : rnd() * box.y, rnd()], i * 4);
+    b.set([rnd(), rnd(), rnd(), rnd()], i * 4);
+  }
+  g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(a, 4));
+  g.setAttribute('aSeed2', new THREE.InstancedBufferAttribute(b, 4));
+  g.instanceCount = 0;
+  const m = new THREE.ShaderMaterial({
+    uniforms: { ...SNOW_SHARED, uBox: { value: box }, uCenter: { value: new THREE.Vector3() }, uFadeBottom: { value: opts.fadeBottom ? 1 : 0 } },
+    defines: opts.drift ? { DRIFT: 1 } : {},
+    vertexShader: SNOW_VERT, fragmentShader: SNOW_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 10;
+  mesh.userData.max = max;
+  scene.add(mesh);
+  return mesh;
+}
+const snowNear = makeSnowLayer(MOBILE ? 22000 : 50000, new THREE.Vector3(22, 14, 22), { fadeBottom: true });
+const snowFar = makeSnowLayer(MOBILE ? 28000 : 70000, new THREE.Vector3(64, 26, 64));
+const snowDrift = makeSnowLayer(MOBILE ? 9000 : 22000, new THREE.Vector3(30, 1, 30), { drift: true });
+
+let fallOff = 0, fallV = 1;
+const _up = new THREE.Color(), _gr = new THREE.Color(), _sn = new THREE.Color(), _fw = new THREE.Vector3(), _white = new THREE.Color(1, 1, 1);
+function updateSnow(dt, t) {
+  const s = S.snow, U = SNOW_SHARED;
+  fallV = lerp(fallV, 0.85 + 0.35 * s, 1 - Math.exp(-dt * 0.8));
+  fallOff += fallV * dt;
+  U.uTime.value = t;
+  U.uFall.value = fallOff;
+  U.uFallV.value = fallV;
+  U.uWind.value.copy(wind.off);
+  U.uWindV.value.set(Math.cos(wind.dir), Math.sin(wind.dir)).multiplyScalar(wind.speed);
+  U.uSize.value = lerp(0.009, 0.02, smooth(0.1, 0.75, s)) * (1 - 0.3 * smooth(0.85, 1, s));
+  U.uTurb.value = 0.25 + 0.12 * wind.speed;
+  U.uFlutter.value = 0.045 * (1 - 0.5 * s);
+  U.uFog.value = scene.fog.density;
+  U.uFogCol.value.copy(scene.fog.color);
+  U.uCam.value.copy(camera.position);
+  U.uFocus.value = Math.max(2, camera.position.distanceTo(controls.target));
+  // a bright lamp over-exposes white flakes toward white, so the flakes see a less saturated colour than the ground
+  U.uLampCol.value.copy(lampLight.color).lerp(_white, 0.4);
+  U.uWinCol.value.copy(winLight.color).lerp(_white, 0.3);
+  U.uLampI.value = lampLight.intensity;
+  U.uWinI.value = winLight.intensity;
+  U.uTreeI.value = treeLight.intensity;
+  U.uSunCol.value.copy(sun.color);
+  U.uSunI.value = sun.intensity;
+  // a flake scatters roughly the average light around it: sky above, lit snow below, a little direct sun/moon
+  _up.copy(skyU.uHor.value).lerp(skyU.uTop.value, 0.45);
+  _gr.copy(hemi.color).multiplyScalar(hemi.intensity * 0.86 / Math.PI)
+    .add(_sn.copy(sun.color).multiplyScalar(sun.intensity * 0.6 * 0.86 / Math.PI));
+  U.uAmb.value.copy(_up).add(_gr).multiplyScalar(0.52)
+    .add(_sn.copy(sun.color).multiplyScalar(sun.intensity * 0.92 * 0.35 / Math.PI));
+  const c = camera.position;
+  camera.getWorldDirection(_fw); _fw.y = 0; _fw.normalize();
+  snowNear.material.uniforms.uCenter.value.set(c.x + _fw.x * 6, c.y + 1, c.z + _fw.z * 6);
+  snowFar.material.uniforms.uCenter.value.set(c.x, 13, c.z);
+  snowDrift.material.uniforms.uCenter.value.set(c.x, 0, c.z);
+  snowNear.geometry.instanceCount = Math.floor(snowNear.userData.max * Math.pow(s, 1.1));
+  snowFar.geometry.instanceCount = Math.floor(snowFar.userData.max * Math.pow(s, 1.25));
+  snowNear.visible = snowNear.geometry.instanceCount > 0;
+  snowFar.visible = snowFar.geometry.instanceCount > 0;
+  const drift = smooth(2.5, 7, wind.speed);
+  U.uDriftAmt.value = drift;
+  snowDrift.geometry.instanceCount = Math.floor(snowDrift.userData.max * drift);
+  snowDrift.visible = snowDrift.geometry.instanceCount > 0;
 }
 
 /* ---------------- load Blender models ---------------- */
@@ -606,10 +770,10 @@ function stepCritter(dt) {
 const wind = { dir: Math.random() * 6.28, gust: 0, gustT: 0, next: 3, off: new THREE.Vector2(), speed: 0 };
 function stepWind(dt) {
   wind.next -= dt;
-  if (wind.next < 0) { wind.gustT = Math.pow(Math.random(), 2) * (0.4 + 3.2 * S.snow); wind.next = 3 + Math.random() * 7; }
+  if (wind.next < 0) { wind.gustT = Math.pow(Math.random(), 2) * (0.3 + 3.0 * S.snow * S.snow); wind.next = 3 + Math.random() * 7; }
   wind.gust = lerp(wind.gust, wind.gustT, 1 - Math.exp(-dt * 0.7));
   wind.dir += (Math.random() - 0.5) * dt * 0.15;
-  wind.speed = 0.15 + 2.4 * Math.pow(S.snow, 1.6) + wind.gust;
+  wind.speed = 0.2 + 1.2 * S.snow * S.snow + 7.5 * Math.pow(smooth(0.8, 1, S.snow), 1.5) + wind.gust;
   wind.off.x += Math.cos(wind.dir) * wind.speed * dt;
   wind.off.y += Math.sin(wind.dir) * wind.speed * dt;
 }
@@ -778,7 +942,6 @@ function applyEnv() {
   skyU.uClear.value = clamp(1 - s * 1.25, 0, 1);
   scene.fog.color.copy(fogCol);
   scene.fog.density = 0.008 + 0.034 * Math.pow(s, 1.4);
-  fU.uFog.value = scene.fog.density;
   hemi.color.copy(N.hemiS).lerp(D.hemiS, d);
   hemi.groundColor.copy(N.hemiG).lerp(D.hemiG, d);
   hemi.intensity = lerp(N.hemi, D.hemi, d) * (1 - s * 0.12);
@@ -786,7 +949,6 @@ function applyEnv() {
   sun.intensity = lerp(N.sunI, D.sunI, d) * (1 - s * 0.45);
   sun.position.copy(sun.target.position).addScaledVector(SUN_DIR, 50);
   renderer.toneMappingExposure = lerp(N.exp, D.exp, d);
-  fU.uColor.value.setScalar(lerp(PAL.night.flake, PAL.day.flake, d)).multiply(new THREE.Color(lerp(0.82, 1, d), lerp(0.88, 1, d), 1));
   bloom.strength = lerp(0.62, 0.2, d);
   bloom.threshold = lerp(0.62, 0.92, d);
   glU.uDay.value = d;
@@ -796,9 +958,15 @@ function applyEnv() {
 /* ---------------- loop ---------------- */
 const clock = new THREE.Clock();
 let lampK = 1, winK = 1, treeK = 1;
+let simT = 0, paused = false;
 function frame() {
+  if (paused) return;
   requestAnimationFrame(frame);
-  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  tick(Math.min(clock.getDelta(), 0.05));
+}
+function tick(dt) {
+  simT += dt;
+  const t = simT;
 
   S.day = lerp(S.day, S.dayTarget, 1 - Math.exp(-dt * 1.6));
   if (Math.abs(S.day - S.dayTarget) < 0.001) S.day = S.dayTarget;
@@ -820,14 +988,6 @@ function frame() {
   stepWind(dt);
   audio.update(wind.speed);
 
-  // snow
-  fU.uTime.value = t;
-  fU.uSpeed.value = 0.75 + 0.9 * S.snow + wind.gust * 0.12;
-  fU.uWind.value.copy(wind.off);
-  fU.uCam.value.copy(camera.position);
-  fU.uSway.value = 1 - S.snow * 0.4;
-  fU.uBig.value = smooth(0.5, 1, S.snow);
-  fGeo.setDrawRange(0, Math.floor(MAXF * Math.pow(S.snow, 1.2)));
   sky.position.copy(camera.position);
   skyU.uTime.value = t;
   glU.uTime.value = t;
@@ -838,8 +998,7 @@ function frame() {
   treeK = lerp(treeK, S.treeOn ? 1 : 0, 1 - Math.exp(-dt * 5));
   const flick = 1 + Math.sin(t * 13.0) * 0.01 + Math.sin(t * 7.3) * 0.015;
   lampLight.intensity = lampK * lerp(5, 26, night) * flick;
-  fU.uLamp.value = lampK * lerp(0.15, 1, night);
-  glU.uLamp.value = fU.uLamp.value;
+  glU.uLamp.value = lampK * lerp(0.15, 1, night);
   halo.material.uniforms.uOp.value = lampK * night * (0.1 + S.snow * 0.22);
   glow.lamp.forEach((m) => (m.emissiveIntensity = lampK * lerp(1.6, 3.2, night) * flick));
   const candle = 1 + Math.sin(t * 9.1) * 0.04 + Math.sin(t * 3.7) * 0.05;
@@ -852,6 +1011,7 @@ function frame() {
     tlMesh.setColorAt(i, tmpC.copy(tlBase[i]).multiplyScalar(k));
   }
   tlMesh.instanceColor.needsUpdate = true;
+  updateSnow(dt, t);
   starMat.color.setRGB(3.2, 2.3, 0.9).multiplyScalar((0.15 + treeK * 0.85) * (1 + Math.sin(t * 2) * 0.12));
   star.rotation.y = Math.sin(t * 0.5) * 0.4;
 
@@ -904,7 +1064,10 @@ function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h); composer.setSize(w, h);
   camera.aspect = w / h; camera.updateProjectionMatrix();
-  fU.uScale.value = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  const buf = renderer.getDrawingBufferSize(new THREE.Vector2());
+  SNOW_SHARED.uRes.value.copy(buf);
+  SNOW_SHARED.uScale.value = buf.y / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+  SNOW_SHARED.uAper.value = 0.5 * 0.012 * SNOW_SHARED.uScale.value;
   glU.uPR.value = renderer.getPixelRatio();
 }
 addEventListener('resize', resize);
@@ -912,4 +1075,4 @@ resize();
 frame();
 
 // test hooks (harmless in production)
-window.__snow = { wcv, finish: () => { while (carving) stepCarve(1); for (let i = 0; i < 60 && critter; i++) stepCritter(0.3); writeTex.needsUpdate = true; }, grab: () => { composer.render(); return renderer.domElement.toDataURL('image/jpeg', 0.85); }, S, setAmount, setDay, carve, startCritter, shakeTree, camera, controls };
+window.__snow = { SU: SNOW_SHARED, layers: () => [snowNear, snowFar, snowDrift], wind, pause: () => { paused = true; }, tick: (dt) => tick(dt), wcv, finish: () => { while (carving) stepCarve(1); for (let i = 0; i < 60 && critter; i++) stepCritter(0.3); writeTex.needsUpdate = true; }, grab: () => { composer.render(); return renderer.domElement.toDataURL('image/jpeg', 0.85); }, S, setAmount, setDay, carve, startCritter, shakeTree, camera, controls };
