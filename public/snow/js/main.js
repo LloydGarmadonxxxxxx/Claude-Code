@@ -239,7 +239,7 @@ const flakes = new THREE.Points(fGeo, new THREE.ShaderMaterial({
   uniforms: fU, transparent: true, depthWrite: false,
   vertexShader: `
     uniform float uTime, uSpeed, uScale, uLamp, uFog, uSway, uBig; uniform vec2 uWind; uniform vec3 uBox, uCam, uLampPos;
-    attribute vec4 aSeed; varying float vA, vGlow, vBlur;
+    attribute vec4 aSeed; varying float vA, vGlow, vBlur, vTw;
     void main(){
       float r = aSeed.w;
       vec3 p;
@@ -260,15 +260,25 @@ const flakes = new THREE.Points(fGeo, new THREE.ShaderMaterial({
          * smoothstep(0.0, 0.25, p.y) * (1.0 - smoothstep(uBox.x * 0.4, uBox.x * 0.5, length(p.xz - uCam.xz)));
       vec3 dl = p - uLampPos;
       vGlow = uLamp * exp(-dot(dl, dl) / 4.5);
-      gl_PointSize = clamp(px, 1.4, 52.0);
+      float pick = step(0.78, fract(r * 37.31));
+      float tw = pow(0.5 + 0.5 * sin(uTime * (1.6 + fract(r * 91.7) * 4.0) + r * 90.0), 8.0);
+      vTw = pick * tw * (1.0 - vBlur) + vGlow * 0.35 * tw;
+      gl_PointSize = clamp(px, 1.4, 52.0) * 2.4;
       gl_Position = projectionMatrix * mv;
     }`,
   fragmentShader: `
-    uniform vec3 uColor, uGlow; varying float vA, vGlow, vBlur;
+    uniform vec3 uColor, uGlow; varying float vA, vGlow, vBlur, vTw;
     void main(){
-      float d = length(gl_PointCoord - 0.5);
-      float a = 1.0 - smoothstep(0.5 - (0.16 + 0.3 * vBlur), 0.5, d);
-      gl_FragColor = vec4(uColor + uGlow * vGlow * 2.2, a * vA);
+      vec2 c = gl_PointCoord - 0.5;
+      float d = length(c) * 2.4;
+      float core = 1.0 - smoothstep(1.0 - (0.32 + 0.6 * vBlur), 1.0, d);
+      float halo = exp(-d * d * 1.1) * (0.16 + 0.22 * vTw) * (1.0 - vBlur * 0.8);
+      vec2 q = abs(c) * 2.0;
+      float ray = (exp(-q.x * 55.0) * (1.0 - q.y) + exp(-q.y * 55.0) * (1.0 - q.x)) * vTw * 0.9;
+      vec3 col = (uColor + uGlow * vGlow * 2.2) * (1.0 + vTw * 1.6);
+      vec3 hcol = mix(vec3(0.82, 0.9, 1.0), vec3(1.0, 0.78, 0.5), clamp(vGlow, 0.0, 1.0)) * (uColor.r * 1.3 + uGlow * vGlow);
+      float a = max(core, halo + ray);
+      gl_FragColor = vec4(mix(hcol, col, core), clamp(a, 0.0, 1.0) * vA);
     }`,
 }));
 flakes.frustumCulled = false;
