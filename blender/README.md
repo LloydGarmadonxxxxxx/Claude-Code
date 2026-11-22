@@ -26,6 +26,7 @@ python3 scripts/test_render.py
 | 脚本 | 内容 |
 |---|---|
 | `scripts/test_render.py` | 测试渲染：一个金色金属圆环，960×540，Cycles 引擎 |
+| `scripts/snow_assets.py` | 「初雪」网页的模型：3 种带积雪松树、圣诞树、原木小屋、路灯、栅栏，导出 `snow_assets.glb` 和内嵌版 `snow_assets.gltf.json`。加 `--preview` 顺便渲染一张预览图 |
 
 ## 备注
 
