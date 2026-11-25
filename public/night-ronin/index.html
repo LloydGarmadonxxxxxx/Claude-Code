@@ -33,7 +33,9 @@ button:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
 .btn:hover{border-color:var(--ember);color:#fff}
 .btn.pri{border-color:var(--ember);color:#ffd9b0;background:rgba(60,28,8,.75);font-size:20px;padding:10px 34px}
 /* title */
-#title{background:radial-gradient(ellipse at 50% 60%,rgba(0,0,0,0),rgba(0,0,0,.7))}
+#title{background:linear-gradient(90deg,rgba(0,0,0,.78),rgba(0,0,0,.2) 55%,transparent);align-items:flex-start;padding-left:calc(7vw + var(--sl))}
+#title .keys{text-align:left!important;max-width:min(520px,46vw)!important}
+@media (max-width:700px){#title{align-items:center;padding-left:16px;background:rgba(0,0,0,.45)}#title .keys{text-align:center!important;max-width:none!important}}
 #title h1{margin:0;font-size:clamp(52px,11vh,96px);line-height:1;color:#fff;text-shadow:0 0 18px rgba(255,154,60,.55),0 0 2px #fff;font-weight:400}
 #title .sub{color:var(--ember);font:clamp(18px,3.6vh,26px) VT323,monospace;letter-spacing:.3em;margin-top:-6px}
 #title .keys{color:var(--dim);font-size:13px;text-align:center;max-width:640px}
@@ -169,7 +171,8 @@ button:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
   <button class="btn pri" id="pResume" style="grid-column:1/-1">继续</button>
   <button class="btn" id="pMusic"></button><button class="btn" id="pSfx"></button>
   <button class="btn" id="pAscii"></button><button class="btn" id="pCell"></button>
-  <button class="btn" id="pAuto"></button><button class="btn" id="pQual"></button>
+  <button class="btn" id="pCam"></button><button class="btn" id="pQual"></button>
+  <button class="btn" id="pAuto" style="grid-column:1/-1"></button>
   <button class="btn" id="pRestart">重新开始</button><button class="btn" id="pTitle">回到标题</button>
  </div>
 </div>
