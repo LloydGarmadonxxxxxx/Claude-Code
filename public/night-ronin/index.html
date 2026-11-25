@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>夜行剑客</title>
+<link rel="icon" href="./favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#040509">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=ZCOOL+QingKe+HuangYou&family=VT323&display=swap" rel="stylesheet">
+<style>
+/*
+VOICE: 夜色、冷峻、刀光一闪
+IDEA: 一台老旧的字符终端，把整座夜晚的教堂村庄打成 ASCII
+PICTURE: 全屏实时 3D 场景经字符滤镜渲染，斗笠剑客在其中砍怪
+COLOUR and TYPE: 墨黑底、羊皮纸白字、窗灯橙；剑道白/元素蓝/秘术紫；ZCOOL QingKe HuangYou + VT323
+LAYOUT: 横屏游戏：左上血条经验，中上计时，右上技能树，左下摇杆，右下攻击闪避与四个异能槽
+*/
+:root{--ink:#ece6d6;--dim:#8d887a;--ember:#ff9a3c;--blood:#e5483d;--xp:#7fe8d0;--b0:#ece6d6;--b1:#59b8ff;--b2:#b892ff;--gold:#f2c14e;
+--st:env(safe-area-inset-top,0px);--sr:env(safe-area-inset-right,0px);--sb:env(safe-area-inset-bottom,0px);--sl:env(safe-area-inset-left,0px)}
+*{box-sizing:border-box;min-width:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;background:#000;color:var(--ink);font:15px/1.45 system-ui,"PingFang SC","Microsoft YaHei",sans-serif;overflow:hidden;overscroll-behavior:none;touch-action:none}
+canvas{position:fixed;left:0;top:0;display:block}
+#ov{pointer-events:none;z-index:2}
+.hide{display:none!important}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+button:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+.disp{font-family:"ZCOOL QingKe HuangYou",system-ui,sans-serif;letter-spacing:.04em}
+.mono{font-family:VT323,ui-monospace,monospace}
+.scr{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+ padding:calc(12px + var(--st)) calc(16px + var(--sr)) calc(12px + var(--sb)) calc(16px + var(--sl));background:rgba(3,4,8,.62)}
+.btn{min-height:44px;padding:8px 22px;border:1px solid #6b665a;background:rgba(14,14,18,.85);color:var(--ink);border-radius:4px;font-size:16px}
+.btn:hover{border-color:var(--ember);color:#fff}
+.btn.pri{border-color:var(--ember);color:#ffd9b0;background:rgba(60,28,8,.75);font-size:20px;padding:10px 34px}
+/* title */
+#title{background:radial-gradient(ellipse at 50% 60%,rgba(0,0,0,0),rgba(0,0,0,.7))}
+#title h1{margin:0;font-size:clamp(52px,11vh,96px);line-height:1;color:#fff;text-shadow:0 0 18px rgba(255,154,60,.55),0 0 2px #fff;font-weight:400}
+#title .sub{color:var(--ember);font:clamp(18px,3.6vh,26px) VT323,monospace;letter-spacing:.3em;margin-top:-6px}
+#title .keys{color:var(--dim);font-size:13px;text-align:center;max-width:640px}
+#title .keys b{color:var(--ink);font-weight:500}
+#best{color:var(--gold);font:18px VT323,monospace}
+/* hud */
+#hud{position:fixed;inset:0;z-index:5;pointer-events:none}
+#tl{position:absolute;left:calc(12px + var(--sl));top:calc(10px + var(--st));width:min(300px,34vw);display:grid;gap:5px}
+.bar{position:relative;height:16px;background:rgba(20,20,26,.8);border:1px solid #3d3a35;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:var(--w,100%);transition:width .12s}
+.bar span{position:absolute;left:6px;top:-2px;font:16px VT323,monospace;color:#fff;text-shadow:0 1px 2px #000;white-space:nowrap}
+.hp i{background:linear-gradient(#ff6a5c,#b8241b)}
+.sh i{background:linear-gradient(#ffe38a,#c99a1e)}
+.xp{height:10px}.xp i{background:linear-gradient(#a8fff0,#33b79c)}
+#lvT{font:18px VT323,monospace;color:var(--xp)}
+#tc{position:absolute;left:50%;top:calc(6px + var(--st));transform:translateX(-50%);text-align:center;width:min(420px,40vw)}
+#timeT{font:30px/1 VT323,monospace;color:#fff;text-shadow:0 0 8px rgba(255,255,255,.35)}
+#killT{font:16px VT323,monospace;color:var(--dim)}
+#bossBar{margin-top:4px}#bossBar b{font:16px "ZCOOL QingKe HuangYou",sans-serif;color:#ff8a7a;font-weight:400}
+.boss{height:12px}.boss i{background:linear-gradient(#ff4d6d,#7a0d24)}
+#tr{position:absolute;right:calc(10px + var(--sr));top:calc(8px + var(--st));display:flex;gap:8px;pointer-events:auto}
+.hb{position:relative;min-height:44px;min-width:44px;padding:0 12px;border:1px solid #5a564c;background:rgba(10,10,14,.7);border-radius:4px;font-size:15px}
+#btnTree.glow{border-color:var(--gold);color:var(--gold);box-shadow:0 0 14px rgba(242,193,78,.55);animation:pulse 1.2s infinite}
+#spBadge{position:absolute;top:-7px;right:-7px;min-width:20px;height:20px;border-radius:10px;background:var(--gold);color:#000;font:16px/20px VT323,monospace;font-style:normal;padding:0 5px}
+@keyframes pulse{50%{box-shadow:0 0 2px rgba(242,193,78,.2)}}
+#joyZone{position:fixed;inset:0;z-index:4;touch-action:none}
+#joy{position:fixed;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid rgba(236,230,214,.35);background:rgba(236,230,214,.06);z-index:6;pointer-events:none}
+#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(236,230,214,.35);border:1px solid rgba(255,255,255,.6)}
+#joyHint{position:fixed;left:calc(90px + var(--sl));bottom:calc(70px + var(--sb));width:110px;height:110px;margin:-55px;border-radius:50%;border:2px dashed rgba(236,230,214,.18);z-index:5;pointer-events:none;display:grid;place-items:center;color:rgba(236,230,214,.3);font-size:12px}
+#acts{position:fixed;right:calc(0px + var(--sr));bottom:calc(0px + var(--sb));width:270px;height:220px;z-index:6;pointer-events:none}
+#acts>button{position:absolute;pointer-events:auto;border-radius:50%;touch-action:none}
+#btnAtk{right:22px;bottom:22px;width:88px;height:88px;background:rgba(80,30,12,.55);border:2px solid var(--ember);font:38px "ZCOOL QingKe HuangYou",sans-serif;color:#ffd2a6}
+#btnAtk.on{background:rgba(255,140,50,.4)}
+#btnDodge{right:126px;bottom:14px;width:60px;height:60px;background:rgba(20,20,28,.6);border:2px solid #9a968a;font:24px "ZCOOL QingKe HuangYou",sans-serif}
+.sk{width:56px;height:56px;background:rgba(12,12,18,.7);border:2px solid var(--bc,#444)!important;display:grid;place-items:center;font:24px "ZCOOL QingKe HuangYou",sans-serif;color:var(--bc,#666);overflow:visible}
+.sk::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.74) calc(var(--cd,0)*1turn),transparent 0)}
+.sk.rdy{box-shadow:0 0 10px var(--bc)}
+.sk em{position:absolute;z-index:2;font:20px VT323,monospace;font-style:normal;color:#fff;text-shadow:0 0 3px #000}
+.sk small,#btnAtk small,#btnDodge small{position:absolute;right:-4px;bottom:-4px;font:13px/1 VT323,monospace;background:#000;color:#aaa;padding:1px 3px;border-radius:3px;z-index:3}
+.touch .sk small,.touch #btnAtk small,.touch #btnDodge small{display:none}
+#s0{right:140px;bottom:92px}#s1{right:86px;bottom:150px}#s2{right:24px;bottom:120px}#s3{right:204px;bottom:36px}
+#dCd{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(0,0,0,.7) calc(var(--cd,0)*1turn),transparent 0)}
+#banner{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:7;font:clamp(28px,6vh,46px) "ZCOOL QingKe HuangYou",sans-serif;color:#fff;text-shadow:0 0 16px var(--bcol,#ff9a3c);opacity:0;transition:opacity .25s;pointer-events:none;text-align:center;white-space:nowrap}
+#banner small{display:block;font:18px VT323,monospace;color:var(--ink);letter-spacing:.2em}
+#banner.on{opacity:1}
+#vig{position:fixed;inset:0;z-index:3;pointer-events:none;box-shadow:inset 0 0 120px rgba(220,30,20,.85);opacity:0;transition:opacity .25s}
+/* tree */
+#tree{justify-content:flex-start;gap:6px;background:rgba(4,5,9,.9);padding-top:calc(8px + var(--st))}
+#tHead{display:flex;align-items:center;gap:14px;width:100%;max-width:1100px}
+#tHead h2{margin:0;font:30px "ZCOOL QingKe HuangYou",sans-serif;font-weight:400}
+#tSp{font:22px VT323,monospace;color:var(--gold)}
+#tHead .btn{margin-left:auto}
+#tBody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.48fr);gap:12px;width:100%;max-width:1100px;flex:1;min-height:0}
+#tGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-height:0}
+.br{display:flex;flex-direction:column;min-height:0;border-top:2px solid var(--bc);background:linear-gradient(180deg,rgba(255,255,255,.035),transparent)}
+.br h3{margin:0;padding:3px 0;text-align:center;font:20px "ZCOOL QingKe HuangYou",sans-serif;font-weight:400;color:var(--bc)}
+.bx{position:relative;flex:1;min-height:200px}
+.bx svg{position:absolute;inset:0;width:100%;height:100%}
+.nd{position:absolute;width:46px;height:46px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #3a3833;background:#0d0d11;color:#5d5a52;font:22px "ZCOOL QingKe HuangYou",sans-serif;display:grid;place-items:center}
+.nd.ult{border-radius:8px;width:50px;height:50px}
+.nd.av{border-color:var(--nc);color:var(--nc);animation:pulse2 1.4s infinite}
+.nd.own{background:var(--nc);color:#0a0a0c;border-color:var(--nc)}
+.nd.max{box-shadow:0 0 0 2px var(--gold),0 0 12px var(--gold)}
+.nd.sel{outline:2px solid #fff;outline-offset:3px}
+.nd i{position:absolute;bottom:-11px;font:13px/1 VT323,monospace;font-style:normal;color:var(--ink);background:#000;padding:1px 3px;border-radius:3px;white-space:nowrap}
+.nd.au::before{content:"";position:absolute;inset:-6px;border-radius:50%;border:1px dashed var(--nc);opacity:.5}
+@keyframes pulse2{50%{box-shadow:0 0 12px var(--nc)}}
+#tInfo{border:1px solid #2e2c28;background:rgba(14,14,18,.85);padding:10px 12px;overflow:auto;display:flex;flex-direction:column;gap:6px;font-size:14px}
+#tInfo h4{margin:0;font:26px "ZCOOL QingKe HuangYou",sans-serif;font-weight:400}
+#tInfo .tag{font-size:12px;color:#000;background:var(--nc,#aaa);padding:1px 6px;border-radius:3px;align-self:flex-start}
+#tInfo p{margin:0;color:#cfc9b9}
+#tInfo .nx{color:var(--xp)}
+#tInfo .req{color:#d9826f;font-size:13px}
+#tInfo .row{display:flex;gap:6px;flex-wrap:wrap}
+#tInfo .btn{padding:6px 12px;font-size:15px}
+#tInfo .eq{min-width:44px;padding:6px 0}
+#tInfo .eq.on{border-color:var(--nc);color:var(--nc)}
+/* pause & over */
+#pause .list{display:grid;grid-template-columns:repeat(2,minmax(0,220px));gap:10px}
+#pause h2,#over h2{margin:0;font:40px "ZCOOL QingKe HuangYou",sans-serif;font-weight:400}
+#over .stats{font:22px VT323,monospace;display:grid;grid-template-columns:auto auto;gap:2px 22px;color:var(--ink)}
+#over .stats b{color:var(--gold);font-weight:400;text-align:right}
+#rotate{z-index:40;background:#050507;text-align:center}
+#rotate .ph{width:46px;height:78px;border:3px solid var(--ink);border-radius:8px;animation:rot 2s infinite ease-in-out}
+@keyframes rot{40%,70%{transform:rotate(-90deg)}}
+#tip{position:fixed;left:50%;bottom:calc(14px + var(--sb));transform:translateX(-50%);z-index:7;font-size:13px;color:var(--dim);pointer-events:none;white-space:nowrap}
+@media (max-height:430px){#tInfo{font-size:13px}#tInfo h4{font-size:22px}.nd{width:40px;height:40px;font-size:19px}.nd.ult{width:44px;height:44px}#tHead h2{font-size:24px}.br h3{font-size:17px}#title .keys{display:none}}
+@media (prefers-reduced-motion:reduce){.nd.av,#btnTree.glow{animation:none}}
+</style></head><body>
+<canvas id="gl"></canvas><canvas id="ov"></canvas>
+<div id="vig"></div>
+<div id="joyZone"></div>
+<div id="joy" class="hide"><div id="knob"></div></div>
+<div id="hud" class="hide">
+ <div id="tl">
+  <div class="bar hp" id="hpB"><i id="hpF"></i><span id="hpT">100/100</span></div>
+  <div class="bar sh hide" id="shB"><i id="shF"></i><span id="shT"></span></div>
+  <div class="bar xp"><i id="xpF" style="--w:0%"></i></div>
+  <div id="lvT">Lv 1</div>
+ </div>
+ <div id="tc"><div id="timeT">00:00</div><div id="killT">击杀 0</div>
+  <div id="bossBar" class="hide"><b id="bossName">堕落主教</b><div class="bar boss"><i id="bossF"></i></div></div></div>
+ <div id="tr"><button class="hb" id="btnTree">技能树<em id="spBadge">0</em></button><button class="hb" id="btnPause">暂停</button></div>
+ <div id="joyHint">移动</div>
+ <div id="acts">
+  <button class="sk" id="s0" data-s="0"><small>1</small></button>
+  <button class="sk" id="s1" data-s="1"><small>2</small></button>
+  <button class="sk" id="s2" data-s="2"><small>3</small></button>
+  <button class="sk" id="s3" data-s="3"><small>4</small></button>
+  <button id="btnDodge">闪<div id="dCd"></div><small>K</small></button>
+  <button id="btnAtk">斩<small>J</small></button>
+ </div>
+</div>
+<div id="banner"></div>
+<div id="tip" class="hide"></div>
+
+<div id="title" class="scr">
+ <h1 class="disp">夜行剑客</h1>
+ <div class="sub">ASCII · NIGHT · RONIN</div>
+ <div id="best"></div>
+ <button class="btn pri disp" id="btnStart">开始斩妖</button>
+ <div class="keys">电脑：<b>WASD</b> 移动 · <b>J / 鼠标左键</b> 斩击（按住连斩） · <b>K / 空格 / 右键</b> 闪避 · <b>1-4</b> 释放异能 · <b>T</b> 技能树 · <b>Esc</b> 暂停<br>手机：横屏，左手摇杆，右手斩击、闪避与异能。升级获得技能点，点亮三系技能树。</div>
+</div>
+
+<div id="tree" class="scr hide">
+ <div id="tHead"><h2>技能树</h2><div id="tSp">技能点 0</div><button class="btn" id="tClose">继续战斗</button></div>
+ <div id="tBody"><div id="tGrid"></div><div id="tInfo"></div></div>
+</div>
+
+<div id="pause" class="scr hide">
+ <h2>暂停</h2>
+ <div class="list">
+  <button class="btn pri" id="pResume" style="grid-column:1/-1">继续</button>
+  <button class="btn" id="pMusic"></button><button class="btn" id="pSfx"></button>
+  <button class="btn" id="pAscii"></button><button class="btn" id="pCell"></button>
+  <button class="btn" id="pAuto"></button><button class="btn" id="pQual"></button>
+  <button class="btn" id="pRestart">重新开始</button><button class="btn" id="pTitle">回到标题</button>
+ </div>
+</div>
+
+<div id="over" class="scr hide">
+ <h2 id="oTitle">你倒下了</h2>
+ <div class="stats" id="oStats"></div>
+ <div style="display:flex;gap:10px"><button class="btn pri" id="oAgain">再来一局</button><button class="btn" id="oTitleB">回到标题</button></div>
+</div>
+
+<div id="rotate" class="scr hide"><div class="ph"></div><div class="disp" style="font-size:26px">请把手机横过来</div><div style="color:var(--dim);font-size:13px">夜行剑客需要横屏游玩</div></div>
+
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+<script type="module" src="./src/main.js"></script>
+</body></html>
